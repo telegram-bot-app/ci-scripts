@@ -1,17 +1,19 @@
-name: Microservice docker image build.
+name: Microservice docker image build
 
 on:
-  workflow_call: {}
-  workflow_dispatch: {}
-  push:
-    paths-ignore:
-    - '**.md'
-    branches:
-      - "master"
-      - "main"
+  workflow_call:
+    inputs:
+      enable-code-scans:
+        required: false
+        type: boolean
+    secrets:
+      ghcr-token:
+        required: true
+        description: Github token allowing access to the libraries and ghcr.
 
 env:
   GOPRIVATE: "github.com/telegram-bot-app/*"
+  ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
 
 jobs:
   # This job is responsible for preparation of the build
@@ -46,7 +48,7 @@ jobs:
           config_file: semver.yaml
           repository_local: true
           github_username: ${{ github.ACTOR }}
-          github_token: ${{ secrets.GHCR_TOKEN }}
+          github_token: $GHCR_TOKEN
 
       - name: Semver check
         run: |
@@ -54,53 +56,72 @@ jobs:
 
   # This job is responsible for running tests and linting the codebase
   test:
-    needs: [prepare]
+    name: "Unit testing"
+    # needs: [prepare]
     runs-on: ubuntu-20.04
-    container: github/super-linter:v4
+    # container: github/super-linter:v4
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.3
       - name: Configure git for private modules
-        run: |
-          git config --global url."https://${{ github.repository_owner }}:${{ secrets.GHCR_TOKEN }}@github.com".insteadOf "https://github.com"
-          export GOPRIVATE=${{ env.GOPRIVATE}}
-      - name: Lint Code Base
-        if: env.ENABLE_CODE_LINT == true
-        env:
-          VALIDATE_ALL_CODEBASE: true
-          VALIDATE_DOCKERFILE: false # this leaves us with hadolint only
-          VALIDATE_GO: false # disable bulk validation of go files, run the linter manually
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          LOG_LEVEL: WARN
-        run: |
-          golangci-lint run --exclude-use-default ./...
-          /action/lib/linter.sh
+        uses: extractions/netrc@v1
+        with:
+          machine: github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.ghcr-token }}
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - name: Run unit tests
         run: |
-          make test CI_RUN=${CI}
+          CI_RUN=${CI} make test
 
   # This job is responsible for running additional scans on the codebase
   code_scans:
-    needs: [ prepare ]
-    name: Code scans pipeline
+    # needs: [ prepare ]
+    name: Code scans
     runs-on: ubuntu-20.04
     container: golang:1-buster
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
       - name: Configure git for private modules
+        uses: extractions/netrc@v1
+        with:
+          machine: github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.ghcr-token }}
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Prepare for code scans
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          git config --global url."https://${{ github.repository_owner }}:${{ secrets.GHCR_TOKEN }}@github.com".insteadOf "https://github.com"
-          export GOPRIVATE=${{ env.GOPRIVATE}}
-          go mod tidy
+          go get ./...
       - name: WriteGoList
         run: go list -json -m all > go.list
       - name: Running nancy
         if: env.ENABLE_CODE_SCANS == true
+        continue-on-error: true
         uses: sonatype-nexus-community/nancy-github-action@main
       - name: Running gosec
         if: env.ENABLE_CODE_SCANS == true
+        continue-on-error: true
         uses: securego/gosec@master
         with:
           args: ./...
@@ -117,15 +138,13 @@ jobs:
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{ github.ACTOR }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
+          password: ${{ secrets.ghcr-token }}
       - name: Build image
         id: docker_build
         uses: docker/build-push-action@v2
@@ -135,18 +154,23 @@ jobs:
           push: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
           tags: "${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.GITHUB_SHA }},${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},${{ needs.prepare.outputs.DOCKER_IMAGE  }}:latest"
           build-args: |
-            GITHUB_AUTH_TOKEN=${{ secrets.GHCR_TOKEN }}
+            ACCESS_TOKEN=${{ secrets.ghcr-token }}
+            ACCESS_USERNAME=${{ github.actor }}
             MICROSERVICE_NAME=${{ github.event.repository.name }}
             GITHUB_COMMIT_NUMBER=${{ needs.prepare.outputs.GITHUB_COMMIT_NUMBER }}
             GITHUB_SHA=${{ needs.prepare.outputs.GITHUB_SHA }}
           labels: "org.opencontainers.image.revision=${{ needs.prepare.outputs.GITHUB_SHA }},org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ'),org.opencontainers.image.version=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},com.github.repo.branch=$(echo ${GITHUB_REF##*/} | tr '[A-Z]' '[a-z]')"
           no-cache: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
 
-   # This job is responsible for creation of the release
+  # This job is responsible for creation of the release
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [ prepare, build ]
+    needs: [ prepare, test, code_scans, build ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2

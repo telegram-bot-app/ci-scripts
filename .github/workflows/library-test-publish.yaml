@@ -1,4 +1,4 @@
-name: Microservice docker image build.
+name: Microservices library release
 
 on:
   workflow_call:
@@ -14,6 +14,7 @@ on:
 env:
   GOPRIVATE: "github.com/telegram-bot-app/*"
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
+
 jobs:
   # This job is responsible for preparation of the build
   # environment variables.
