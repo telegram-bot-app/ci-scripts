@@ -116,11 +116,11 @@ jobs:
       - name: WriteGoList
         run: go list -json -m all > go.list
       - name: Running nancy
-        if: env.ENABLE_CODE_SCANS
+        if: env.ENABLE_CODE_SCANS == true
         continue-on-error: true
         uses: sonatype-nexus-community/nancy-github-action@main
       - name: Running gosec
-        if: env.ENABLE_CODE_SCANS
+        if: env.ENABLE_CODE_SCANS == true
         uses: securego/gosec@master
         with:
           args: ./...
