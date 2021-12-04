@@ -83,12 +83,9 @@ jobs:
           path: |
             ${{ steps.yarn-cache-dir-path.outputs.dir-local }}
             ${{ steps.yarn-cache-dir-path.outputs.dir-global }}
-            ${{ steps.yarn-cache-dir-path.outputs.dir-global-bin }}
           key: ${{ runner.os }}-c-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-c-${{ env.cache-version }}-
-            ${{ runner.os }}-c-
-            ${{ runner.os }}-
+            ${{ runner.os }}-c-${{ hashFiles('**/yarn.lock') }}
 
       - name: Install dependencies
         if: steps.yarn-cache.outputs.cache-hit != 'true'
@@ -107,9 +104,30 @@ jobs:
           quasar -v
           quasar build -m ssr
 
-      - name: Copy modules into non-dotfile directory
+
+      - name: Setup yarn cache
+        uses: actions/cache@v2
+        id: yarn-cache-ssr # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        env:
+            cache-version: v1
+        with:
+          path: |
+            ${{ steps.yarn-cache-dir-path.outputs.dir-local }}
+            ${{ steps.yarn-cache-dir-path.outputs.dir-global }}
+            node_modules
+          key: ${{ runner.os }}-cssr-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cssr-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Install ssr dependencies
+        if: steps.yarn-cache-ssr.outputs.cache-hit != 'true'
         run: |
-          cp -r node_modules ${{ inputs.node-app-path }}/
+          cd ${{ inputs.node-app-path }}/
+          yarn --prefer-offline --network-timeout 1000000000 --ignore-optional --ignore-engines --link-duplicates --check-files
+
+      - name: Copy certificates
+        run: |
+          cp -r certs ${{ inputs.node-app-path }}/ || true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
