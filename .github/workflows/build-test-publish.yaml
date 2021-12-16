@@ -6,10 +6,22 @@ on:
       enable-code-scans:
         required: false
         type: boolean
+      k8s-microservice-name:
+        required: true
+        type: string
+      k8s-namespace:
+        required: true
+        type: string
     secrets:
       ghcr-token:
         required: true
         description: Github token allowing access to the libraries and ghcr.
+      drone-server:
+        required: true
+        description: Drone server url.
+      drone-token:
+        required: true
+        description: Drone token.
 
 env:
   GOPRIVATE: "github.com/telegram-bot-app/*"
@@ -127,7 +139,7 @@ jobs:
           args: ./...
 
   # This job is responsible for building docker image
-  build:
+  build-local:
     needs: [ prepare, test, code_scans ]
     name: Docker image build (multiarch)
     runs-on: ubuntu-latest
@@ -170,7 +182,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [ prepare, test, code_scans, build ]
+    needs: [ prepare, test, code_scans, build-local ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -178,15 +190,30 @@ jobs:
           fetch-depth: 0
       - name: Get list of the commits since last release
         run: |
-          echo "$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"%h %s")" > .release_notes
+          printf "$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"%h %s")" > .release_notes
       - name: Create Release
         id: create_release
-        uses: actions/create-release@main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # if: needs.prepare.outputs.CHECK_IF_MASTER_BRANCH == 'true'
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
-          release_name: v${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
+          name: v${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
           body_path: .release_notes
-          draft: false
+          token: ${{ secrets.ghcr-token }}
+          tag_name: v${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
           prerelease: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
+
+  deploy:
+    name: Deploy to dev cluster
+    runs-on: ubuntu-latest
+    needs: [ prepare, build-local, release ]
+    env:
+      DRONE_SERVER: ${{ secrets.drone-server }}
+      DRONE_TOKEN: ${{ secrets.drone-token }}
+    steps:
+      - name: Install drone client
+        run: |
+          curl -L https://github.com/harness/drone-cli/releases/latest/download/drone_linux_amd64.tar.gz | tar zx
+          sudo install -t /usr/local/bin drone
+      - name: Run deployment
+        run: |
+          drone build create --param IMAGE_VERSION=${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} --param IMAGE_DEPLOYMENT_NAME=${{ inputs.k8s-microservice-name }} ${{ github.repository }}
