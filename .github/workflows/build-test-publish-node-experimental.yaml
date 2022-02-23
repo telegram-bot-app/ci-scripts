@@ -114,7 +114,7 @@ jobs:
 
       - name: Install SSR app dependencies
         run: |
-          cd ${{ inputs.node-app-path }}
+          cd dist/ssr
           NODE_ENV=production yarn install --prefer-offline --network-timeout 1000000000 --ignore-optional --ignore-engines --check-files
 
       - name: Set up QEMU
