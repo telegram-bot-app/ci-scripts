@@ -42,6 +42,7 @@ jobs:
       GITHUB_SHA: ${{ steps.get_env.outputs.GITHUB_SHA }}
       DOCKER_IMAGE_SEMVER: ${{ steps.semver.outputs.semantic_version }}
       WORKING_DIRECTORY: ${{ steps.get_env.outputs.WORKING_DIRECTORY }}
+      CHECK_IF_MASTER_BRANCH: ${{ steps.get_env.outputs.CHECK_IF_MASTER_BRANCH }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
@@ -57,6 +58,13 @@ jobs:
           echo "::set-output name=GITHUB_SHA::$(echo ${GITHUB_SHA::8})"
           [ -d "website/" ] && cd website/ || cd ${{ inputs.node-app-path }}
           echo "::set-output name=WORKING_DIRECTORY::$(pwd)"
+          # Check if it's master or main branch
+          currentBranch=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$currentBranch" = "master" ] || [ "$currentBranch" = "main" ]; then
+            echo "::set-output name=CHECK_IF_MASTER_BRANCH::true"
+          else
+            echo "::set-output name=CHECK_IF_MASTER_BRANCH::false"
+          fi
 
       - name: Establish semver
         id: semver
