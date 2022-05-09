@@ -108,8 +108,7 @@ jobs:
 
       - name: Inject additional metadata
         run: |
-          # echo "{ \"version\": \"${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}\", \"commit\": \"${{ needs.prepare.outputs.GITHUB_SHA }}\", \"build\": \"$GITHUB_RUN_NUMBER/$GITHUB_REF_NAME $(date +'%d/%m/%Y/%H%M')\" }" > ${{ inputs.node-app-path }}/www/metadata.json
-          printf "\nMETADATA_VERSION=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}\nMETADATA_COMMIT=${{ needs.prepare.outputs.GITHUB_SHA }}\nMETADATA_BUILD=$GITHUB_RUN_NUMBER/$GITHUB_REF_NAME $(date +'%d/%m/%Y/%H%M')\n" >> .env-prod
+          printf "\nMETADATA_VERSION=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}\nMETADATA_COMMIT=${{ needs.prepare.outputs.GITHUB_SHA }}\nMETADATA_BUILD=$GITHUB_RUN_NUMBER/$GITHUB_REF_NAME $(date +'%d/%m/%Y/%H%M')\n" >> .env
 
       - name: Build the application
         run: |
