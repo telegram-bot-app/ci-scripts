@@ -190,10 +190,10 @@ jobs:
 #           cache-to: type=local,dest=/tmp/.buildx-cache-new
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+#       - name: Move cache
+#         run: |
+#           rm -rf /tmp/.buildx-cache
+#           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   # This job is responsible for creation of the release
   release:
