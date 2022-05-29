@@ -86,6 +86,7 @@ jobs:
     defaults:
       run:
         working-directory: ${{ needs.prepare.outputs.WORKING_DIRECTORY }}
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
