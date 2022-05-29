@@ -139,7 +139,7 @@ jobs:
         uses: docker/setup-buildx-action@v1
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.ACTOR }}
@@ -169,10 +169,10 @@ jobs:
 #           cache-to: type=local,dest=/tmp/.buildx-cache-new
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+#       - name: Move cache
+#         run: |
+#           rm -rf /tmp/.buildx-cache
+#           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
 
   # # This job is responsible for running tests and linting the codebase
