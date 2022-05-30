@@ -184,8 +184,8 @@ jobs:
             GITHUB_SHA=${{ needs.prepare.outputs.GITHUB_SHA }}
           labels: "org.opencontainers.image.revision=${{ needs.prepare.outputs.GITHUB_SHA }},org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ'),org.opencontainers.image.version=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},com.github.repo.branch=$(echo ${GITHUB_REF##*/} | tr '[A-Z]' '[a-z]')"
           no-cache: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
 #           cache-from: type=local,src=/tmp/.buildx-cache
 #           cache-to: type=local,dest=/tmp/.buildx-cache-new
           secrets: |
