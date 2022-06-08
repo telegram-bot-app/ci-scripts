@@ -142,7 +142,8 @@ jobs:
   build-local:
     needs: [ prepare, test, code_scans ]
     name: Docker image build (multiarch)
-    runs-on: self-hosted
+    runs-on: ubuntu-20.04
+#     runs-on: self-hosted
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
