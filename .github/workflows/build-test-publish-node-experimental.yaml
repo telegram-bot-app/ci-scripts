@@ -155,6 +155,7 @@ jobs:
         id: 'gcloudauth'
         uses: 'google-github-actions/auth@v0'
         with:
+          token_format: 'access_token'
           credentials_json: '${{ secrets.gcloud-token }}'
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
@@ -163,6 +164,7 @@ jobs:
           registry: eu.gcr.io
           username: 'oauth2accesstoken'
           password: '${{ steps.gcloudauth.outputs.access_token }}'
+          logout: false
       - name: Build image
         id: docker_build
         uses: docker/build-push-action@v2
