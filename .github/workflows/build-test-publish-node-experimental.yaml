@@ -178,6 +178,7 @@ jobs:
             GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
       - name: Re-tag image for GCR
         run: |
+          docker pull ${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
           docker tag ${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }} eu.gcr.io/${{ secrets.gcloud-project }}/website/ms-website-v3:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
       - name: Push to GCR
         uses: RafikFarhad/push-to-gcr-github-action@v4.1
