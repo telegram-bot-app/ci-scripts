@@ -25,6 +25,12 @@ on:
       drone-token:
         required: true
         description: Drone token.
+      gcloud-token:
+        required: true
+        description: Google Cloud token
+      gcloud-project:
+        required: true
+        description: Google Cloud Project
 
 env:
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
@@ -170,6 +176,17 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
+      - name: Re-tag image for GCR
+        run: |
+          docker tag ${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }} eu.gcr.io/${{ secrets.gcloud-project }}/website/ms-website-v3:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
+      - name: Push to GCR
+        uses: RafikFarhad/push-to-gcr-github-action@v4.1
+        with:
+          gcloud_service_key: ${{ secrets.gcloud-token }}
+          project_id: ${{ secrets.gcloud-project }}
+          registry: eu.gcr.io
+          push_only: true
+          image_name: eu.gcr.io/${{ secrets.gcloud-project }}/website/ms-website-v3:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
       - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache
@@ -327,4 +344,4 @@ jobs:
           sudo install -t /usr/local/bin drone
       - name: Run deployment
         run: |
-          drone build create --param IMAGE_VERSION=${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} ${{ github.repository }}
+          drone build create --param IMAGE_VERSION=${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_SEMVER=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} ${{ github.repository }}
