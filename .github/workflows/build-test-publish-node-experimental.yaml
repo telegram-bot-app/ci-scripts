@@ -151,6 +151,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.ACTOR }}
           password: ${{ secrets.ghcr-token }}
+      - name: 'Authenticate to Google Cloud'
+        id: 'gcloud-auth'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          credentials_json: '${{ secrets.gcloud-token }}'
+      - name: 'Log in to Google Cloud Registry'
+        run: |-
+          echo '${{ steps.gcloud-auth.outputs.access_token }}' | docker login -u oauth2accesstoken --password-stdin https://eu.gcr.io
       - name: Build image
         id: docker_build
         uses: docker/build-push-action@v2
@@ -158,7 +166,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/arm64,linux/amd64
           push: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
-          tags: "${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.GITHUB_SHA }},${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},${{ needs.prepare.outputs.DOCKER_IMAGE  }}:latest"
+          tags: "${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.GITHUB_SHA }},${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},${{ needs.prepare.outputs.DOCKER_IMAGE  }}:latest,eu.gcr.io/${{ secrets.gcloud-project }}/website/${{ needs.prepare.outputs.SANITISED_REPOSITORY_NAME }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}"
           build-args: |
             ACCESS_TOKEN=${{ secrets.ghcr-token }}
             ACCESS_USERNAME=${{ github.actor }}
@@ -176,18 +184,6 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
-      - name: Re-tag image for GCR
-        run: |
-          docker pull ${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
-          docker tag ${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }} eu.gcr.io/${{ secrets.gcloud-project }}/website/ms-website-v3:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
-      - name: Push to GCR
-        uses: RafikFarhad/push-to-gcr-github-action@v4.1
-        with:
-          gcloud_service_key: ${{ secrets.gcloud-token }}
-          project_id: ${{ secrets.gcloud-project }}
-          registry: eu.gcr.io
-          push_only: true
-          image_name: eu.gcr.io/${{ secrets.gcloud-project }}/website/ms-website-v3:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
       - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache
