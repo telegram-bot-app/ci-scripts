@@ -138,7 +138,7 @@ jobs:
       - name: Install SSR app dependencies
         run: |
           cd dist/ssr
-          NODE_ENV=production yarn install --prefer-offline --network-timeout 1000000000 --ignore-optional --ignore-engines --check-files
+          NODE_ENV=production yarn --prefer-offline --network-timeout 1000000000 --ignore-optional --ignore-engines --check-files
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
