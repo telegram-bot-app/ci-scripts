@@ -22,6 +22,12 @@ on:
       drone-token:
         required: true
         description: Drone token.
+      signing-key:
+        required: true
+        description: Image signing key
+      signing-password:
+        required: true
+        description: Image signing password
 
 env:
   GOPRIVATE: "github.com/telegram-bot-app/*"
@@ -151,7 +157,7 @@ jobs:
       - uses: sigstore/cosign-installer@main
 
       - name: Write signing key to disk (only needed for `cosign sign --key`)
-        run: echo "${{ secrets.SIGNING_SECRET }}" > cosign.key
+        run: echo "${{ secrets.signing-key }}" > cosign.key
         
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -207,7 +213,7 @@ jobs:
           cosign sign --key cosign.key \
             ${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
         env:
-          COSIGN_PASSWORD: "${{ secrets.SIGNING_PASSWORD }}"
+          COSIGN_PASSWORD: "${{ secrets.signing-password }}"
 
   # This job is responsible for creation of the release
   release:
