@@ -47,7 +47,7 @@ jobs:
       DOCKER_IMAGE_SEMVER: ${{ steps.semver.outputs.semantic_version }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: '0'
       - name: Set environment variables
@@ -80,9 +80,9 @@ jobs:
     # container: github/super-linter:v4
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.19
       - name: Configure git for private modules
@@ -91,7 +91,7 @@ jobs:
           machine: github.com
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cache/go-build
@@ -111,14 +111,14 @@ jobs:
     container: golang:1-buster
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Configure git for private modules
         uses: extractions/netrc@v1
         with:
           machine: github.com
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         id: cache
         with:
           path: |
@@ -152,7 +152,7 @@ jobs:
 #     runs-on: self-hosted
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         
       - uses: sigstore/cosign-installer@main
 
@@ -161,7 +161,7 @@ jobs:
         
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
-#       - uses: actions/cache@v2
+#       - uses: actions/cache@v3
 #         id: cache
 #         with:
 #           path: |
@@ -222,7 +222,7 @@ jobs:
     needs: [ prepare, test, code_scans, build-local ]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Get list of the commits since last release
