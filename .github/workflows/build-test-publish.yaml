@@ -147,6 +147,12 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
+        
+      - uses: sigstore/cosign-installer@main
+
+      - name: Write signing key to disk (only needed for `cosign sign --key`)
+        run: echo "${{ secrets.SIGNING_SECRET }}" > cosign.key
+        
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 #       - uses: actions/cache@v2
@@ -195,6 +201,13 @@ jobs:
 #         run: |
 #           rm -rf /tmp/.buildx-cache
 #           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Sign container image
+        run: |
+          cosign sign --key cosign.key \
+            ${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
+        env:
+          COSIGN_PASSWORD: "${{ secrets.SIGNING_PASSWORD }}"
 
   # This job is responsible for creation of the release
   release:
