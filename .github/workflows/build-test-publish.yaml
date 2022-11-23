@@ -6,6 +6,9 @@ on:
       enable-code-scans:
         required: false
         type: boolean
+      enable-image-signing:
+        required: false
+        type: boolean
       k8s-microservice-name:
         required: true
         type: string
@@ -23,15 +26,16 @@ on:
         required: true
         description: Drone token.
       signing-key:
-        required: true
+        required: false
         description: Image signing key
       signing-password:
-        required: true
+        required: false
         description: Image signing password
 
 env:
   GOPRIVATE: "github.com/telegram-bot-app/*"
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
+  ENABLE_IMAGE_SIGNING: ${{ inputs.enable-image-signing }}
 
 jobs:
   # This job is responsible for preparation of the build
@@ -157,6 +161,7 @@ jobs:
       - uses: sigstore/cosign-installer@main
 
       - name: Write signing key to disk (only needed for `cosign sign --key`)
+        if: env.ENABLE_IMAGE_SIGNING == true
         run: echo "${{ secrets.signing-key }}" > cosign.key
         
       - name: Set up QEMU
@@ -209,6 +214,7 @@ jobs:
 #           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Sign container image
+        if: env.ENABLE_IMAGE_SIGNING == true
         run: |
           cosign sign --key cosign.key \
             ${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
