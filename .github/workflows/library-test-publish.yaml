@@ -36,10 +36,10 @@ jobs:
         id: get_env
         run: |
           TMP_SANITISED_REPOSITORY_NAME=$(echo ${{ github.event.repository.name }} | sed -e 's|\.|-|g')
-          echo "::set-output name=SANITISED_REPOSITORY_NAME::$TMP_SANITISED_REPOSITORY_NAME"
-          echo "::set-output name=DOCKER_IMAGE::ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME"
-          echo "::set-output name=GITHUB_COMMIT_NUMBER::$(git rev-list --count HEAD)"
-          echo "::set-output name=GITHUB_SHA::$(echo ${GITHUB_SHA::8})"
+          echo "SANITISED_REPOSITORY_NAME=$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          echo "GITHUB_COMMIT_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_OUTPUT
+          echo "GITHUB_SHA=$(echo ${GITHUB_SHA::8})" >> $GITHUB_OUTPUT
 
       - name: Establish semver
         id: semver
@@ -62,9 +62,9 @@ jobs:
     # container: github/super-linter:v4
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.19
       - name: Configure git for private modules
@@ -73,7 +73,7 @@ jobs:
           machine: github.com
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cache/go-build
@@ -93,14 +93,14 @@ jobs:
     container: golang:1-buster
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Configure git for private modules
         uses: extractions/netrc@v1
         with:
           machine: github.com
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         id: cache
         with:
           path: |
@@ -132,19 +132,20 @@ jobs:
     needs: [ prepare, test, code_scans]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Get list of the commits since last release
         run: |
           printf "$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"%h %s")" > .release_notes
-      - name: Create Release
-        id: create_release
-        # if: needs.prepare.outputs.CHECK_IF_MASTER_BRANCH == 'true'
-        uses: softprops/action-gh-release@v1
+      - name: Create release
+        uses: ncipollo/release-action@v1
         with:
+          bodyFile: ./.release_notes
           name: v${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
-          body_path: .release_notes
           token: ${{ secrets.ghcr-token }}
-          tag_name: v${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
+          tag: v${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
           prerelease: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
+          allowUpdates: true
+          makeLatest: true
+
