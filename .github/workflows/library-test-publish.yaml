@@ -29,7 +29,7 @@ jobs:
       DOCKER_IMAGE_SEMVER: ${{ steps.semver.outputs.semantic_version }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: '0'
       - name: Set environment variables
@@ -80,10 +80,10 @@ jobs:
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
       - name: Run unit tests
         run: |
-          CI_RUN=${CI} make test
+          make test
 
   # This job is responsible for running additional scans on the codebase
   code_scans:
@@ -108,7 +108,7 @@ jobs:
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
       - name: Prepare for code scans
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
