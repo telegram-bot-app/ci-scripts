@@ -104,6 +104,11 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+      - name: Conditional dependencies
+        run: |
+          if [ -f ./addons.sh ]; then
+            ./addons.sh
+          fi
       - name: Run unit tests
         run: |
           CI_RUN=${CI} make test
@@ -174,12 +179,29 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
+      - name: Conditional dependencies
+        run: |
+          if [ -f ./addons.sh ]; then
+            ./addons.sh
+          fi
+
       - name: Build binaries
         run: |
           export LOCAL_VERSION=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
-          export LDFLAGS="-s -w -X main.PKG_VERSION=$LOCAL_VERSION"
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -ldflags="$LDFLAGS" -o dist/bot-linux-amd64
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -a -ldflags="$LDFLAGS" -o dist/bot-linux-arm64
+          export SANITISED_REPOSITORY_NAME=${{ needs.prepare.outputs.SANITISED_REPOSITORY_NAME }}
+          export GOLDFLAGS="-s -w -X main.PKG_VERSION=$LOCAL_VERSION -X main.SVC_NAME=$SANITISED_REPOSITORY_NAME -X main.SVC_VERSION=`$(date +\"%Y%m%d%H%M\")`"
+
+          # if $SANITISED_REPOSITORY_NAME is "ms-text-analysis" then use CGO_ENABLED=1
+          # else use CGO_ENABLED=0
+          if [ "$SANITISED_REPOSITORY_NAME" = "ms-text-analysis" ]; then
+            export CGO_ENABLED=1
+          else
+            export CGO_ENABLED=0
+          fi
+
+          GOOS=linux GOARCH=amd64 go build -a -ldflags="$GOLDFLAGS" -o dist/bot-linux-amd64
+          CFLAGS="-march=armv8-a" CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64 go build -a -ldflags="-extld=aarch64-linux-gnu-gcc $GOLDFLAGS" -o dist/bot-linux-arm64
+
           # CGO_ENABLED=0 GOOS=darwin go build -ldflags="$LDFLAGS" -a -installsuffix cgo -o dist/bot-darwin-amd64
           # CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="$LDFLAGS" -a -installsuffix cgo -o dist/bot-darwin-arm64
 
