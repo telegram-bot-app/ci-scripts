@@ -83,7 +83,7 @@ jobs:
     # needs: [prepare]
     runs-on: ubuntu-20.04
     # container: github/super-linter:v4
-    container: node:10.18-jessie
+    container: golang:1-bullseye
 
     services:
       # Label used to access the service container
