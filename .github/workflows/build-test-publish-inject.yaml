@@ -122,8 +122,10 @@ jobs:
           fi
       - name: Run unit tests
         env:
-          REDIS_SERVER: "redis:6379"
+          REDIS_HOST: redis
+          REDIS_PORT: 6379
         run: |
+          export REDIS_SERVER="$REDIS_HOST:$REDIS_PORT"
           CI_RUN=${CI} make test
 
   # This job is responsible for running additional scans on the codebase
