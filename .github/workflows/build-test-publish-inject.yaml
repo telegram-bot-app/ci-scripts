@@ -79,6 +79,12 @@ jobs:
 
   # This job is responsible for running tests and linting the codebase
   test:
+    name: "Unit testing"
+    # needs: [prepare]
+    runs-on: ubuntu-20.04
+    # container: github/super-linter:v4
+    container: node:10.18-jessie
+
     services:
       # Label used to access the service container
       redis:
@@ -90,10 +96,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    name: "Unit testing"
-    # needs: [prepare]
-    runs-on: ubuntu-20.04
-    # container: github/super-linter:v4
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
