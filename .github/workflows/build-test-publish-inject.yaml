@@ -217,7 +217,8 @@ jobs:
           fi
 
           GOOS=linux GOARCH=amd64 go build -a -ldflags="$GOLDFLAGS" -o dist/bot-linux-amd64
-          CFLAGS="-march=armv8-a" CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64 go build -a -ldflags="-extld=aarch64-linux-gnu-gcc $GOLDFLAGS" -o dist/bot-linux-arm64
+          # CFLAGS="-march=armv8-a" CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64 go build -a -ldflags="-extld=aarch64-linux-gnu-gcc $GOLDFLAGS" -o dist/bot-linux-arm64
+          GOOS=linux GOARCH=arm64 go build -a -ldflags="$GOLDFLAGS" -o dist/bot-linux-arm64
 
           # CGO_ENABLED=0 GOOS=darwin go build -ldflags="$LDFLAGS" -a -installsuffix cgo -o dist/bot-darwin-amd64
           # CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="$LDFLAGS" -a -installsuffix cgo -o dist/bot-darwin-arm64
