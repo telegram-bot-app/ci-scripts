@@ -3,6 +3,10 @@ name: Microservice docker image build
 on:
   workflow_call:
     inputs:
+      disable-unit-tests:
+        required: false
+        default: false
+        type: boolean
       enable-code-scans:
         required: false
         type: boolean
@@ -84,6 +88,7 @@ jobs:
     runs-on: ubuntu-20.04
     # container: github/super-linter:v4
     container: golang:1-bullseye
+    if: disable-unit-tests == false
 
     services:
       # Label used to access the service container
