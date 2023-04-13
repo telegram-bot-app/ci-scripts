@@ -88,7 +88,6 @@ jobs:
     runs-on: ubuntu-20.04
     # container: github/super-linter:v4
     container: golang:1-bullseye
-    if: inputs.disable-unit-tests == false
 
     services:
       # Label used to access the service container
@@ -128,6 +127,7 @@ jobs:
             ./addons.sh
           fi
       - name: Run unit tests
+        if: inputs.disable-unit-tests == false
         env:
           REDIS_HOST: redis
           REDIS_PORT: 6379
