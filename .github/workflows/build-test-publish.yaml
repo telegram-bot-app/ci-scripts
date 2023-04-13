@@ -3,6 +3,10 @@ name: Microservice docker image build
 on:
   workflow_call:
     inputs:
+      disable-unit-tests:
+        required: false
+        default: false
+        type: boolean
       enable-code-scans:
         required: false
         type: boolean
@@ -104,6 +108,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
       - name: Run unit tests
+        if: disable-unit-tests != false
         run: |
           CI_RUN=${CI} make test
 
