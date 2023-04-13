@@ -108,7 +108,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
       - name: Run unit tests
-        if: disable-unit-tests != false
+        if: inputs.disable-unit-tests != false
         run: |
           CI_RUN=${CI} make test
 
