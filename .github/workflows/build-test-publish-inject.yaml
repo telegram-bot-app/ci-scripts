@@ -218,7 +218,7 @@ jobs:
         run: |
           export LOCAL_VERSION=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
           export SANITISED_REPOSITORY_NAME=${{ needs.prepare.outputs.SANITISED_REPOSITORY_NAME }}
-          export GOLDFLAGS="-s -w -X main.PKG_VERSION=$LOCAL_VERSION -X main.SVC_NAME=$SANITISED_REPOSITORY_NAME -X main.SVC_VERSION=`$(date +\"%Y%m%d%H%M\")`"
+          export GOLDFLAGS="-s -w -X github.com/telegram-bot-app/libpack/config.PKG_NAME=$SANITISED_REPOSITORY_NAME -X github.com/telegram-bot-app/libpack/config.PKG_VERSION=$LOCAL_VERSION -X main.PKG_VERSION=$LOCAL_VERSION -X main.SVC_NAME=$SANITISED_REPOSITORY_NAME -X main.SVC_VERSION=`$(date +\"%Y%m%d%H%M\")`"
 
           # if $SANITISED_REPOSITORY_NAME is "ms-text-analysis" then use CGO_ENABLED=1
           # else use CGO_ENABLED=0
