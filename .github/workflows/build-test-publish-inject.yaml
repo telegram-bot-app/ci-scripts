@@ -44,7 +44,7 @@ env:
   GOPRIVATE: "github.com/telegram-bot-app/*"
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
   ENABLE_IMAGE_SIGNING: ${{ inputs.enable-image-signing }}
-  SHOULD_DEPLOY:  ${{ inputs.should_deploy }}
+  SHOULD_DEPLOY:  "${{ inputs.should_deploy }}"
   GO_VERSION: 1.20.2
 
 jobs:
