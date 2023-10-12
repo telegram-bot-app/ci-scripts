@@ -310,11 +310,11 @@ jobs:
       DRONE_TOKEN: ${{ secrets.drone-token }}
     steps:
       - name: Install drone client
-        if: ${{ inputs.should_deploy == true }}
+        if: ${{ inputs.should-deploy == true }}
         run: |
           curl -L https://github.com/harness/drone-cli/releases/latest/download/drone_linux_amd64.tar.gz | tar zx
           sudo install -t /usr/local/bin drone
       - name: Run deployment
-        if: ${{ inputs.should_deploy == true }}
+        if: ${{ inputs.should-deploy == true }}
         run: |
           drone build create --param IMAGE_VERSION=${{ needs.prepare.outputs.DOCKER_IMAGE }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} --param IMAGE_DEPLOYMENT_NAME=${{ inputs.k8s-microservice-name }} ${{ github.repository }}
