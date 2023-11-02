@@ -111,7 +111,6 @@ jobs:
     # needs: [prepare]
     runs-on: ubuntu-20.04
     # container: github/super-linter:v4
-    container: golang:1-bullseye
     needs: [prepare]
 
     services:
@@ -165,7 +164,6 @@ jobs:
     needs: [ prepare ]
     name: Code scans
     runs-on: ubuntu-20.04
-    container: golang:1-buster
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -294,7 +292,7 @@ jobs:
     needs: [ prepare, test, code_scans, build-local ]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Get list of the commits since last release
