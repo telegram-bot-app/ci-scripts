@@ -114,6 +114,7 @@ jobs:
     runs-on: ubuntu-20.04
     # container: github/super-linter:v4
     container: golang:1-bullseye
+    needs: [prepare]
 
     services:
       # Label used to access the service container
@@ -163,7 +164,7 @@ jobs:
 
   # This job is responsible for running additional scans on the codebase
   code_scans:
-    # needs: [ prepare ]
+    needs: [ prepare ]
     name: Code scans
     runs-on: ubuntu-20.04
     container: golang:1-buster
