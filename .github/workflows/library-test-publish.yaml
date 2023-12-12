@@ -14,6 +14,7 @@ on:
 env:
   GOPRIVATE: "github.com/telegram-bot-app/*"
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
+  GO_VERSION: ">=1.21"
 
 jobs:
   # This job is responsible for preparation of the build
@@ -29,7 +30,7 @@ jobs:
       DOCKER_IMAGE_SEMVER: ${{ steps.semver.outputs.semantic_version }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Set environment variables
@@ -62,11 +63,11 @@ jobs:
     # container: github/super-linter:v4
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.20.2
+          go-version: ${{ env.GO_VERSION }}
       - name: Configure git for private modules
         uses: extractions/netrc@v1
         with:
@@ -93,7 +94,7 @@ jobs:
     container: golang:1-buster
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Configure git for private modules
         uses: extractions/netrc@v1
         with:
@@ -132,7 +133,7 @@ jobs:
     needs: [ prepare, test, code_scans]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Get list of the commits since last release
