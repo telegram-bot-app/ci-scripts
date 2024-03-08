@@ -45,7 +45,7 @@ env:
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
   ENABLE_IMAGE_SIGNING: ${{ inputs.enable-image-signing }}
   SHOULD_DEPLOY:  "${{ inputs.should_deploy }}"
-  GO_VERSION: ">=1.21"
+  GO_VERSION: ">=1.22"
 
 jobs:
   # This job is responsible for preparation of the build
