@@ -55,6 +55,26 @@ jobs:
         run: |
           echo "Semantic version detected: ${{ steps.semver.outputs.semantic_version }}"
 
+      - name: Configure git for private modules
+        uses: extractions/netrc@v1
+        with:
+          machine: github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.ghcr-token }}
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        id: cache
+        with:
+          go-version: ${{env.GO_VERSION}}
+          cache-dependency-path: "**/*.sum"
+
+      - name: Go get dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          go get ./...
+
+
   # This job is responsible for running tests and linting the codebase
   test:
     name: "Unit testing"
@@ -64,24 +84,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Install Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
       - name: Configure git for private modules
         uses: extractions/netrc@v1
         with:
           machine: github.com
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
-      - uses: actions/cache@v3
+      - name: Install Go
+        uses: actions/setup-go@v5
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          go-version: ${{env.GO_VERSION}}
+          cache-dependency-path: "**/*.sum"
+      - name: Install dependencies
+        run: |
+          go get ./...
       - name: Run unit tests
         run: |
           make test
@@ -101,17 +117,12 @@ jobs:
           machine: github.com
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
-      - uses: actions/cache@v3
-        id: cache
+      - name: Install Go
+        uses: actions/setup-go@v5
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-      - name: Prepare for code scans
-        if: steps.cache.outputs.cache-hit != 'true'
+          go-version: ${{env.GO_VERSION}}
+          cache-dependency-path: "**/*.sum"
+      - name: Install dependencies
         run: |
           go get ./...
       - name: WriteGoList
