@@ -52,7 +52,7 @@ jobs:
   # environment variables.
   prepare:
     name: Preparing build context
-    runs-on: home-servers
+    runs-on: arc-runner-tgbotapp
     outputs:
       SANITISED_REPOSITORY_NAME: ${{ steps.get_env.outputs.SANITISED_REPOSITORY_NAME }}
       DOCKER_IMAGE: ${{ steps.get_env.outputs.DOCKER_IMAGE }}
@@ -109,7 +109,7 @@ jobs:
   test:
     name: "Unit testing"
     # needs: [prepare]
-    runs-on: home-servers
+    runs-on: arc-runner-tgbotapp
     # container: github/super-linter:v4
     needs: [prepare]
 
@@ -163,7 +163,7 @@ jobs:
   code_scans:
     needs: [prepare]
     name: Code scans
-    runs-on: home-servers
+    runs-on: arc-runner-tgbotapp
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -202,7 +202,7 @@ jobs:
   build-local:
     needs: [prepare, test, code_scans]
     name: Docker image build (multiarch)
-    runs-on: home-servers
+    runs-on: arc-runner-tgbotapp
     #     runs-on: self-hosted
     steps:
       - name: Checkout repo
@@ -288,7 +288,7 @@ jobs:
   # This job is responsible for creation of the release
   release:
     name: Create Release
-    runs-on: home-servers
+    runs-on: arc-runner-tgbotapp
     needs: [prepare, test, code_scans, build-local]
     steps:
       - name: Checkout code
@@ -311,7 +311,7 @@ jobs:
 
   deploy:
     name: Deploy to dev cluster
-    runs-on: home-servers
+    runs-on: arc-runner-tgbotapp
     needs: [prepare, build-local, release]
     env:
       DRONE_SERVER: ${{ secrets.drone-server }}
