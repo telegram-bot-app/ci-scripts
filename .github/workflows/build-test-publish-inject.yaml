@@ -110,7 +110,7 @@ jobs:
     name: "Unit testing"
     # needs: [prepare]
     runs-on: ubuntu-latest
-    container: ubuntu
+    container: golang:1
     # container: github/super-linter:v4
     needs: [prepare]
 
@@ -150,7 +150,7 @@ jobs:
         run: |
           whoami
           apt-get update
-          apt-get install ca-certificates -y
+          apt-get install ca-certificates make -y
           update-ca-certificates
           go mod tidy
 
