@@ -148,6 +148,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo update-ca-certificates
           go mod tidy
 
       - name: Conditional dependencies
