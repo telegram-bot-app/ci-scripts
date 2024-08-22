@@ -79,7 +79,7 @@ jobs:
           echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
           echo "GITHUB_COMMIT_NUMBER=$TMP_GITHUB_COMMITS_COUNT" >> $GITHUB_OUTPUT
           echo "GITHUB_SHA=$(echo ${GITHUB_SHA::8})" >> $GITHUB_OUTPUT
-          apt-get install git -y
+          sudo apt-get install git -y
 
       - name: Establish semver
         id: semver
