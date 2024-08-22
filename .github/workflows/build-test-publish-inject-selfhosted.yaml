@@ -96,6 +96,7 @@ jobs:
           repository_local: true
           github_username: ${{ github.ACTOR }}
           github_token: ${{ secrets.ghcr-token }}
+          debugmode: true
 
       - name: Install Go
         uses: actions/setup-go@v5
