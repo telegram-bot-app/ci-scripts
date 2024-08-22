@@ -44,7 +44,7 @@ env:
   GOPRIVATE: "github.com/telegram-bot-app/*"
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
   ENABLE_IMAGE_SIGNING: ${{ inputs.enable-image-signing }}
-  SHOULD_DEPLOY:  "${{ inputs.should_deploy }}"
+  SHOULD_DEPLOY: "${{ inputs.should-deploy }}"
   GO_VERSION: ">=1.22"
 
 jobs:
@@ -63,7 +63,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: '0'
+          fetch-depth: "0"
       - name: Set environment variables
         id: get_env
         run: |
@@ -80,7 +80,7 @@ jobs:
           config_file: semver.yaml
           repository_local: true
           github_username: ${{ github.ACTOR }}
-          github_token: $GHCR_TOKEN
+          github_token: ${{ secrets.ghcr-token }}
 
       - name: Semver check
         run: |
@@ -171,7 +171,7 @@ jobs:
 
   # This job is responsible for running additional scans on the codebase
   code_scans:
-    needs: [ prepare ]
+    needs: [prepare]
     name: Code scans
     runs-on: ubuntu-latest
     steps:
@@ -210,10 +210,10 @@ jobs:
 
   # This job is responsible for building docker image
   build-local:
-    needs: [ prepare, test, code_scans ]
+    needs: [prepare, test, code_scans]
     name: Docker image build (multiarch)
     runs-on: ubuntu-latest
-#     runs-on: self-hosted
+    #     runs-on: self-hosted
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -283,23 +283,23 @@ jobs:
           tags: "${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.GITHUB_SHA }},${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},${{ needs.prepare.outputs.DOCKER_IMAGE  }}:latest"
           labels: "org.opencontainers.image.revision=${{ needs.prepare.outputs.GITHUB_SHA }},org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ'),org.opencontainers.image.version=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},com.github.repo.branch=$(echo ${GITHUB_REF##*/} | tr '[A-Z]' '[a-z]')"
           no-cache: false
-#           cache-from: type=gha
-#           cache-to: type=gha,mode=max
-#           cache-from: type=local,src=/tmp/.buildx-cache
-#           cache-to: type=local,dest=/tmp/.buildx-cache-new
+          #           cache-from: type=gha
+          #           cache-to: type=gha,mode=max
+          #           cache-from: type=local,src=/tmp/.buildx-cache
+          #           cache-to: type=local,dest=/tmp/.buildx-cache-new
           context: .
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
-#       - name: Move cache
-#         run: |
-#           rm -rf /tmp/.buildx-cache
-#           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+  #       - name: Move cache
+  #         run: |
+  #           rm -rf /tmp/.buildx-cache
+  #           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   # This job is responsible for creation of the release
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [ prepare, test, code_scans, build-local ]
+    needs: [prepare, test, code_scans, build-local]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -322,7 +322,7 @@ jobs:
   deploy:
     name: Deploy to dev cluster
     runs-on: ubuntu-latest
-    needs: [ prepare, build-local, release ]
+    needs: [prepare, build-local, release]
     env:
       DRONE_SERVER: ${{ secrets.drone-server }}
       DRONE_TOKEN: ${{ secrets.drone-token }}
