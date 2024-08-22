@@ -51,6 +51,8 @@ jobs:
   prepare-and-test:
     name: Prepare and Test
     runs-on: tgbotapp-runner
+    container:
+      image: golang:1
     # services:
     #   redis:
     #     image: redis:7.4.0-alpine
@@ -66,9 +68,6 @@ jobs:
       GITHUB_SHA: ${{ steps.get_env.outputs.GITHUB_SHA }}
       DOCKER_IMAGE_SEMVER: ${{ steps.semver.outputs.semantic_version }}
     steps:
-      - name: Install git
-        run: sudo apt-get install git -y
-
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
@@ -83,11 +82,11 @@ jobs:
           echo "GITHUB_COMMIT_NUMBER=$TMP_GITHUB_COMMITS_COUNT" >> $GITHUB_OUTPUT
           echo "GITHUB_SHA=$(echo ${GITHUB_SHA::8})" >> $GITHUB_OUTPUT
 
-          echo "----"
-          pwd
-          echo "----"
-          ls -lA
-          echo "----"
+          # echo "----"
+          # pwd
+          # echo "----"
+          # ls -lA
+          # echo "----"
 
       - name: Establish semver
         id: semver
@@ -99,7 +98,6 @@ jobs:
           repository_local: true
           github_username: ${{ github.ACTOR }}
           github_token: ${{ secrets.ghcr-token }}
-          debugmode: true
 
       - name: Install Go
         uses: actions/setup-go@v5
