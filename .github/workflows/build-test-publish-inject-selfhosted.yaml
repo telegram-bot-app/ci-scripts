@@ -53,7 +53,7 @@ jobs:
     runs-on: tgbotapp-runner
     services:
       redis:
-        image: redis
+        image: redis:7.4.0-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
