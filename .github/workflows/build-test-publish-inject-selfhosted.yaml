@@ -89,7 +89,7 @@ jobs:
         with:
           config_file: semver.yaml
           repository_local: true
-          github_username: ${{ github.actor }}
+          github_username: ${{ github.ACTOR }}
           github_token: ${{ secrets.ghcr-token }}
 
       - name: Install Go
