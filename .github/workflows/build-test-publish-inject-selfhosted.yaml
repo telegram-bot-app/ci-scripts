@@ -51,8 +51,6 @@ jobs:
   prepare-and-test:
     name: Prepare and Test
     runs-on: tgbotapp-runner
-    container:
-      image: golang:1.22
     services:
       redis:
         image: redis
