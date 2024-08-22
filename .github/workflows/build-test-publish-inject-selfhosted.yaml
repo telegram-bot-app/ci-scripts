@@ -88,7 +88,7 @@ jobs:
 
       - name: Establish semver
         id: semver
-        uses: lukaszraczylo/semver-generator@1.11.1
+        uses: lukaszraczylo/semver-generator@v1
         env:
           SEMVER_RAW_FLAGS: "--debug"
         with:
