@@ -66,6 +66,9 @@ jobs:
       GITHUB_SHA: ${{ steps.get_env.outputs.GITHUB_SHA }}
       DOCKER_IMAGE_SEMVER: ${{ steps.semver.outputs.semantic_version }}
     steps:
+      - name: Install git
+        run: sudo apt-get install git -y
+
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
@@ -142,9 +145,6 @@ jobs:
     name: Build and Push Docker Image
     runs-on: tgbotapp-runner
     steps:
-      - name: Install git
-        run: sudo apt-get install git -y
-
       - name: Checkout repo
         uses: actions/checkout@v4
 
