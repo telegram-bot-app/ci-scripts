@@ -80,6 +80,13 @@ jobs:
           echo "GITHUB_COMMIT_NUMBER=$TMP_GITHUB_COMMITS_COUNT" >> $GITHUB_OUTPUT
           echo "GITHUB_SHA=$(echo ${GITHUB_SHA::8})" >> $GITHUB_OUTPUT
 
+      - name: Configure git for private modules
+        uses: extractions/netrc@v1
+        with:
+          machine: github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.ghcr-token }}
+
       - name: Establish semver
         id: semver
         uses: lukaszraczylo/semver-generator@v1
@@ -88,13 +95,6 @@ jobs:
           repository_local: true
           github_username: ${{ github.ACTOR }}
           github_token: ${{ secrets.ghcr-token }}
-
-      - name: Configure git for private modules
-        uses: extractions/netrc@v1
-        with:
-          machine: github.com
-          username: ${{ github.actor }}
-          password: ${{ secrets.ghcr-token }}
 
       - name: Cache Go modules
         uses: actions/cache@v3
