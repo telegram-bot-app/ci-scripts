@@ -79,13 +79,7 @@ jobs:
           echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
           echo "GITHUB_COMMIT_NUMBER=$TMP_GITHUB_COMMITS_COUNT" >> $GITHUB_OUTPUT
           echo "GITHUB_SHA=$(echo ${GITHUB_SHA::8})" >> $GITHUB_OUTPUT
-
-      - name: Install Go
-        uses: actions/setup-go@v5
-        id: cache
-        with:
-          go-version: ${{env.GO_VERSION}}
-          cache-dependency-path: "**/*.sum"
+          apt-get install git -y
 
       - name: Establish semver
         id: semver
@@ -97,6 +91,13 @@ jobs:
           repository_local: true
           github_username: ${{ github.actor }}
           github_token: ${{ secrets.ghcr-token }}
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        id: cache
+        with:
+          go-version: ${{env.GO_VERSION}}
+          cache-dependency-path: "**/*.sum"
 
       - name: Configure git for private modules
         uses: extractions/netrc@v1
