@@ -80,12 +80,12 @@ jobs:
           echo "GITHUB_COMMIT_NUMBER=$TMP_GITHUB_COMMITS_COUNT" >> $GITHUB_OUTPUT
           echo "GITHUB_SHA=$(echo ${GITHUB_SHA::8})" >> $GITHUB_OUTPUT
 
-      - name: Configure git for private modules
-        uses: extractions/netrc@v1
+      - name: Install Go
+        uses: actions/setup-go@v5
+        id: cache
         with:
-          machine: github.com
-          username: ${{ github.actor }}
-          password: ${{ secrets.ghcr-token }}
+          go-version: ${{env.GO_VERSION}}
+          cache-dependency-path: "**/*.sum"
 
       - name: Establish semver
         id: semver
@@ -93,8 +93,15 @@ jobs:
         with:
           config_file: semver.yaml
           repository_local: true
-          github_username: ${{ github.ACTOR }}
+          github_username: ${{ github.actor }}
           github_token: ${{ secrets.ghcr-token }}
+
+      - name: Configure git for private modules
+        uses: extractions/netrc@v1
+        with:
+          machine: github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.ghcr-token }}
 
       - name: Cache Go modules
         uses: actions/cache@v3
