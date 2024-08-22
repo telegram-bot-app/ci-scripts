@@ -51,8 +51,6 @@ jobs:
   prepare-and-test:
     name: Prepare and Test
     runs-on: tgbotapp-runner
-    container:
-      image: golang:1
     # services:
     #   redis:
     #     image: redis:7.4.0-alpine
@@ -68,6 +66,9 @@ jobs:
       GITHUB_SHA: ${{ steps.get_env.outputs.GITHUB_SHA }}
       DOCKER_IMAGE_SEMVER: ${{ steps.semver.outputs.semantic_version }}
     steps:
+      - name: Install dependencies
+        run: sudo apt-get install git make -y
+
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
@@ -143,6 +144,9 @@ jobs:
     name: Build and Push Docker Image
     runs-on: tgbotapp-runner
     steps:
+      - name: Install dependencies
+        run: sudo apt-get install git make -y
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -203,7 +207,7 @@ jobs:
           DRONE_SERVER: ${{ secrets.drone-server }}
           DRONE_TOKEN: ${{ secrets.drone-token }}
         run: |
-          apk add --no-cache curl
+          apt-get install -y curl
           curl -L https://github.com/harness/drone-cli/releases/latest/download/drone_linux_amd64.tar.gz | tar zx
           install -t /usr/local/bin drone
           drone build create --param IMAGE_VERSION=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} --param IMAGE_DEPLOYMENT_NAME=${{ inputs.k8s-microservice-name }} ${{ github.repository }}
