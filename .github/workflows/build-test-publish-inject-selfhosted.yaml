@@ -48,11 +48,11 @@ env:
   GO_VERSION: ">=1.22"
 
 jobs:
-  # This job is responsible for preparation of the build
-  # environment variables.
   prepare:
     name: Preparing build context
     runs-on: tgbotapp-runner
+    container:
+      image: golang:latest
     outputs:
       SANITISED_REPOSITORY_NAME: ${{ steps.get_env.outputs.SANITISED_REPOSITORY_NAME }}
       DOCKER_IMAGE: ${{ steps.get_env.outputs.DOCKER_IMAGE }}
@@ -93,32 +93,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
 
-      - name: Install Go
-        uses: actions/setup-go@v5
-        id: cache
-        with:
-          go-version: ${{env.GO_VERSION}}
-          cache-dependency-path: "**/*.sum"
-
       - name: Go get dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           go get ./...
 
-  # This job is responsible for running tests and linting the codebase
   test:
     name: "Unit testing"
-    # needs: [prepare]
-    runs-on: tgbotapp-runner
-    # container: github/super-linter:v4
     needs: [prepare]
-
+    runs-on: tgbotapp-runner
+    container:
+      image: golang:latest
     services:
-      # Label used to access the service container
       redis:
-        # Docker Hub image
         image: redis
-        # Set health checks to wait until redis has started
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -134,12 +121,6 @@ jobs:
           machine: github.com
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
-
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{env.GO_VERSION}}
-          cache-dependency-path: "**/*.sum"
 
       - name: Install dependencies
         run: |
@@ -159,11 +140,12 @@ jobs:
           export REDIS_SERVER="$REDIS_HOST:$REDIS_PORT"
           CI_RUN=${CI} make test
 
-  # This job is responsible for running additional scans on the codebase
   code_scans:
     needs: [prepare]
     name: Code scans
     runs-on: tgbotapp-runner
+    container:
+      image: golang:latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -175,16 +157,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
 
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{env.GO_VERSION}}
-          cache-dependency-path: "**/*.sum"
-
-      # - name: Prepare for code scans
-      #   if: steps.cache.outputs.cache-hit != 'true'
-      #   run: |
-      #     go get ./...
       - name: WriteGoList
         run: go list -json -m all > go.list
       - name: Running nancy
@@ -198,12 +170,12 @@ jobs:
         with:
           args: ./...
 
-  # This job is responsible for building docker image
   build-local:
     needs: [prepare, test, code_scans]
     name: Docker image build (multiarch)
     runs-on: tgbotapp-runner
-    #     runs-on: self-hosted
+    container:
+      image: docker:20.10-dind
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -233,8 +205,6 @@ jobs:
           export SANITISED_REPOSITORY_NAME=${{ needs.prepare.outputs.SANITISED_REPOSITORY_NAME }}
           export GOLDFLAGS="-s -w -X github.com/telegram-bot-app/libpack/config.PKG_NAME=$SANITISED_REPOSITORY_NAME -X github.com/telegram-bot-app/libpack/config.PKG_VERSION=$LOCAL_VERSION -X main.PKG_VERSION=$LOCAL_VERSION -X main.SVC_NAME=$SANITISED_REPOSITORY_NAME -X main.SVC_VERSION=`$(date +\"%Y%m%d%H%M\")`"
 
-          # if $SANITISED_REPOSITORY_NAME is "ms-text-analysis" then use CGO_ENABLED=1
-          # else use CGO_ENABLED=0
           if [ "$SANITISED_REPOSITORY_NAME" = "ms-text-analysis" ]; then
             export CGO_ENABLED=1
           else
@@ -242,11 +212,7 @@ jobs:
           fi
 
           GOOS=linux GOARCH=amd64 go build -a -ldflags="$GOLDFLAGS" -o dist/bot-linux-amd64
-          # CFLAGS="-march=armv8-a" CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64 go build -a -ldflags="-extld=aarch64-linux-gnu-gcc $GOLDFLAGS" -o dist/bot-linux-arm64
           GOOS=linux GOARCH=arm64 go build -a -ldflags="$GOLDFLAGS" -o dist/bot-linux-arm64
-
-          # CGO_ENABLED=0 GOOS=darwin go build -ldflags="$LDFLAGS" -a -installsuffix cgo -o dist/bot-darwin-amd64
-          # CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="$LDFLAGS" -a -installsuffix cgo -o dist/bot-darwin-arm64
 
           chmod -R 777 dist/*
 
@@ -268,27 +234,20 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           builder: ${{ steps.buildx.outputs.name }}
-          platforms: linux/arm64,linux/amd64 #,linux/aarch64
+          platforms: linux/arm64,linux/amd64
           push: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
           tags: "${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.GITHUB_SHA }},${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},${{ needs.prepare.outputs.DOCKER_IMAGE  }}:latest"
           labels: "org.opencontainers.image.revision=${{ needs.prepare.outputs.GITHUB_SHA }},org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ'),org.opencontainers.image.version=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},com.github.repo.branch=$(echo ${GITHUB_REF##*/} | tr '[A-Z]' '[a-z]')"
           no-cache: false
-          #           cache-from: type=gha
-          #           cache-to: type=gha,mode=max
-          #           cache-from: type=local,src=/tmp/.buildx-cache
-          #           cache-to: type=local,dest=/tmp/.buildx-cache-new
           context: .
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
-  #       - name: Move cache
-  #         run: |
-  #           rm -rf /tmp/.buildx-cache
-  #           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-  # This job is responsible for creation of the release
   release:
     name: Create Release
     runs-on: tgbotapp-runner
+    container:
+      image: alpine:latest
     needs: [prepare, test, code_scans, build-local]
     steps:
       - name: Checkout code
@@ -300,7 +259,6 @@ jobs:
           printf "$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"%h %s")" > .release_notes
       - name: Create Release
         id: create_release
-        # if: needs.prepare.outputs.CHECK_IF_MASTER_BRANCH == 'true'
         uses: softprops/action-gh-release@v1
         with:
           name: v${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
@@ -312,6 +270,8 @@ jobs:
   deploy:
     name: Deploy to dev cluster
     runs-on: tgbotapp-runner
+    container:
+      image: alpine:latest
     needs: [prepare, build-local, release]
     env:
       DRONE_SERVER: ${{ secrets.drone-server }}
