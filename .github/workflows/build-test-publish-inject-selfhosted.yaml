@@ -90,6 +90,8 @@ jobs:
       - name: Establish semver
         id: semver
         uses: lukaszraczylo/semver-generator@v1
+        env:
+          FLAGS: "--debug"
         with:
           config_file: semver.yaml
           repository_local: true
