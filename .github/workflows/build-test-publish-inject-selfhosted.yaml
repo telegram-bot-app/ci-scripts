@@ -228,7 +228,7 @@ jobs:
           timeout_minutes: 5
           max_attempts: 5
           command: |
-            woodpecker_cached_client=/home/runner/.cache/woodpecker-cli_linux_arm64.tar.gz
+            woodpecker_cached_client=/home/runner/.cache/woodpecker.tar.gz
             # if the woodpecker-cli is not cached, download it
             if [ ! -f $woodpecker_cached_client ]; then
               sudo apt-get install curl -y
