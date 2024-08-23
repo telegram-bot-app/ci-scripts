@@ -229,6 +229,7 @@ jobs:
           max_attempts: 5
           command: |
             woodpecker_cached_client=/home/runner/.cache/woodpecker.tar.gz
+            sudo apt-get install git -y
             # if the woodpecker-cli is not cached, download it
             if [ ! -f $woodpecker_cached_client ]; then
               sudo apt-get install curl -y
