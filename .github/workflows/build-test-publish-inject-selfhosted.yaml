@@ -234,8 +234,8 @@ jobs:
               sudo apt-get install curl -y
               curl -sL https://github.com/woodpecker-ci/woodpecker/releases/download/v2.7.0/woodpecker-cli_linux_arm64.tar.gz -o $woodpecker_cached_client
               tar -xvf $woodpecker_cached_client -C /home/runner/.cache/
-              sudo cp /home/runner/.cache/woodpecker-cli /usr/local/bin/woodpecker-cli
             fi
+            sudo cp /home/runner/.cache/woodpecker-cli /usr/local/bin/woodpecker-cli
 
       - name: Checkout code
         uses: actions/checkout@v4
