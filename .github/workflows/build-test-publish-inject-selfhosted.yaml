@@ -226,13 +226,14 @@ jobs:
           timeout_minutes: 5
           max_attempts: 5
           command: |
-            woodpecker_cached_client=/home/runner/.cache/woodpecker-cli.deb
+            woodpecker_cached_client=/home/runner/.cache/woodpecker-cli_linux_arm64.tar.gz
             # if the woodpecker-cli is not cached, download it
             if [ ! -f $woodpecker_cached_client ]; then
               sudo apt-get install curl -y
-              curl -sL https://github.com/woodpecker-ci/woodpecker/releases/download/v2.7.0/woodpecker-cli_2.7.0_amd64.deb -o $woodpecker_cached_client
+              curl -sL https://github.com/woodpecker-ci/woodpecker/releases/download/v2.7.0/woodpecker-cli_linux_arm64.tar.gz -o $woodpecker_cached_client
+              tar -xvf $woodpecker_cached_client
+              sudo cp /home/runner/.cache/woodpecker-cli /usr/local/bin/woodpecker-cli
             fi
-            sudo dpkg -i $woodpecker_cached_client
 
       - name: Checkout code
         uses: actions/checkout@v4
