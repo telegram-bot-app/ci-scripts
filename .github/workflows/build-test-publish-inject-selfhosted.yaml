@@ -256,6 +256,7 @@ jobs:
         env:
           DRONE_SERVER: ${{ secrets.drone-server }}
           DRONE_TOKEN: ${{ secrets.drone-token }}
+        shell: bash -l {0}
         run: |
           woodpecker-cli setup --server ${{ secrets.drone-server }} --token ${{ secrets.drone-token }}
           woodpecker-cli deploy ${{ github.repository }} \
