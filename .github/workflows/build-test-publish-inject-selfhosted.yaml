@@ -67,7 +67,11 @@ jobs:
       DOCKER_IMAGE_SEMVER: ${{ steps.semver.outputs.semantic_version }}
     steps:
       - name: Install dependencies
-        run: sudo apt-get install git make -y
+        uses: nick-invision/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          command: sudo apt-get install git make -y
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -138,7 +142,11 @@ jobs:
     runs-on: tgbotapp-runner
     steps:
       - name: Install dependencies
-        run: sudo apt-get install git make -y
+        uses: nick-invision/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          command: sudo apt-get install git make -y
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -212,6 +220,20 @@ jobs:
     name: Release and Deploy
     runs-on: tgbotapp-runner
     steps:
+      - name: Install dependencies
+        uses: nick-invision/retry@v3
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          command: |
+            woodpecker_cached_client=/home/runner/.cache/woodpecker-cli.deb
+            # if the woodpecker-cli is not cached, download it
+            if [ ! -f $woodpecker_cached_client ]; then
+              sudo apt-get install curl -y
+              curl -sL https://github.com/woodpecker-ci/woodpecker/releases/download/v2.7.0/woodpecker-cli_2.7.0_amd64.deb -o $woodpecker_cached_client
+            fi
+            sudo dpkg -i $woodpecker_cached_client
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -232,14 +254,6 @@ jobs:
           DRONE_SERVER: ${{ secrets.drone-server }}
           DRONE_TOKEN: ${{ secrets.drone-token }}
         run: |
-          woodpecker_cached_client=/home/runner/.cache/woodpecker-cli.deb
-          # if the woodpecker-cli is not cached, download it
-          if [ ! -f $woodpecker_cached_client ]; then
-            sudo apt-get install curl -y
-            curl -sL https://github.com/woodpecker-ci/woodpecker/releases/download/v2.7.0/woodpecker-cli_2.7.0_amd64.deb -o $woodpecker_cached_client
-          fi
-          sudo dpkg -i $woodpecker_cached_client
-
           woodpecker-cli setup --server ${{ secrets.drone-server }} --token ${{ secrets.drone-token }}
           woodpecker-cli deploy ${{ github.repository }} \
             --param IMAGE_VERSION=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} --param IMAGE_DEPLOYMENT_NAME=${{ inputs.k8s-microservice-name }}
