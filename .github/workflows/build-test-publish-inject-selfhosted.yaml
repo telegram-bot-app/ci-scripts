@@ -86,14 +86,6 @@ jobs:
           TMP_SANITISED_REPOSITORY_NAME=$(echo ${{ github.event.repository.name }} | sed -e 's|\.|-|g')
           echo "SANITISED_REPOSITORY_NAME=$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
           echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
-          echo "GITHUB_COMMIT_NUMBER=$TMP_GITHUB_COMMITS_COUNT" >> $GITHUB_OUTPUT
-          echo "GITHUB_SHA=$(echo ${GITHUB_SHA::8})" >> $GITHUB_OUTPUT
-
-          # echo "----"
-          # pwd
-          # echo "----"
-          # ls -lA
-          # echo "----"
 
       - name: Establish semver
         id: semver
@@ -151,7 +143,7 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 5
-          command: sudo apt-get install -qq git make qemu-user-static buildah -y
+          command: sudo apt-get -y update && sudo apt-get install -qq git make qemu-user-static buildah -y
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -210,16 +202,16 @@ jobs:
           archs: amd64,arm64
           # platforms: linux/amd64,linux/arm64
           image: ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}
-          tags: ${{ needs.prepare-and-test.outputs.GITHUB_SHA }} ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} latest
+          tags: ${{ github.sha }} ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} latest
           labels: |
-            org.opencontainers.image.revision=${{ needs.prepare-and-test.outputs.GITHUB_SHA }}
+            org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.event.repository.updated_at }}
             org.opencontainers.image.version=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
             com.github.repo.branch=${{ github.ref_name }}
           context: .
           containerfiles: Dockerfile
           # build-args: |
-          #   GITHUB_SHA=${{ needs.prepare-and-test.outputs.GITHUB_SHA }}
+          #   GITHUB_SHA=${{ github.sha }}
           #   GITHUB_COMMIT_NUMBER=${{ needs.prepare-and-test.outputs.GITHUB_COMMIT_NUMBER }}
 
       # - name: Build and push
@@ -229,11 +221,11 @@ jobs:
       #     platforms: linux/amd64,linux/arm64
       #     push: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
       #     tags: |
-      #       ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.GITHUB_SHA }}
+      #       ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ github.sha }}
       #       ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
       #       ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:latest
       #     labels: |
-      #       org.opencontainers.image.revision=${{ needs.prepare-and-test.outputs.GITHUB_SHA }}
+      #       org.opencontainers.image.revision=${{ github.sha }}
       #       org.opencontainers.image.created=${{ github.event.repository.updated_at }}
       #       org.opencontainers.image.version=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
       #       com.github.repo.branch=${{ github.ref_name }}
