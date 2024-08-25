@@ -73,7 +73,7 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 5
-          command: sudo apt-get install git make -y
+          command: sudo apt-get -qq install git make -y
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -151,7 +151,7 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 5
-          command: sudo apt-get install git make qemu-user-static buildah -y
+          command: sudo apt-get install -qq git make qemu-user-static buildah -y
 
       - name: Checkout repo
         uses: actions/checkout@v4
