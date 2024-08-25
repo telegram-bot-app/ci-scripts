@@ -217,9 +217,9 @@ jobs:
             com.github.repo.branch=${{ github.ref_name }}
           context: .
           containerfiles: Dockerfile
-          build-args: |
-            GITHUB_SHA=${{ needs.prepare-and-test.outputs.GITHUB_SHA }}
-            GITHUB_COMMIT_NUMBER=${{ needs.prepare-and-test.outputs.GITHUB_COMMIT_NUMBER }}
+          # build-args: |
+          #   GITHUB_SHA=${{ needs.prepare-and-test.outputs.GITHUB_SHA }}
+          #   GITHUB_COMMIT_NUMBER=${{ needs.prepare-and-test.outputs.GITHUB_COMMIT_NUMBER }}
 
       # - name: Build and push
       #   uses: docker/build-push-action@v6
