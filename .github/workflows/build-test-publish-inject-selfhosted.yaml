@@ -151,7 +151,7 @@ jobs:
         with:
           timeout_minutes: 5
           max_attempts: 5
-          command: sudo apt-get install git make qemu-user-static -y
+          command: sudo apt-get install git make qemu-user-static buildah -y
 
       - name: Checkout repo
         uses: actions/checkout@v4
