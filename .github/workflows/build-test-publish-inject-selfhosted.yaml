@@ -209,7 +209,7 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
           image: ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}
-          tags: ${{ needs.prepare-and-test.outputs.GITHUB_SHA }},${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }},latest
+          tags: ${{ needs.prepare-and-test.outputs.GITHUB_SHA }} ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} latest
           labels: |
             org.opencontainers.image.revision=${{ needs.prepare-and-test.outputs.GITHUB_SHA }}
             org.opencontainers.image.created=${{ github.event.repository.updated_at }}
