@@ -207,7 +207,8 @@ jobs:
       - name: Build Image
         uses: redhat-actions/buildah-build@v2
         with:
-          platforms: linux/amd64,linux/arm64
+          archs: amd64,arm64
+          # platforms: linux/amd64,linux/arm64
           image: ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}
           tags: ${{ needs.prepare-and-test.outputs.GITHUB_SHA }} ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} latest
           labels: |
