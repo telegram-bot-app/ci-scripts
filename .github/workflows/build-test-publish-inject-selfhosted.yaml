@@ -156,8 +156,12 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # - name: Set up Docker Buildx
-      #   uses: docker/setup-buildx-action@v3
+      - name: Configure git for private modules
+        uses: extractions/netrc@v2
+        with:
+          machine: github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.ghcr-token }}
 
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
