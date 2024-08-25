@@ -136,7 +136,7 @@ jobs:
     name: Build and Push Docker Image
     runs-on: tgbotapp-runner
     container:
-      image: ghcr.io/actions/actions-runner:latest
+      image: quay.io/buildah/stable:latest
     steps:
       - name: Install dependencies
         uses: nick-invision/retry@v3
