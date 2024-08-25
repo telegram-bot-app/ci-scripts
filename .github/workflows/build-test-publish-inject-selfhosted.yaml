@@ -51,6 +51,8 @@ jobs:
   prepare-and-test:
     name: Prepare and Test
     runs-on: tgbotapp-runner
+    container:
+      image: ghcr.io/actions/actions-runner:latest
     # services:
     #   redis:
     #     image: redis:7.4.0-alpine
@@ -141,6 +143,8 @@ jobs:
     needs: prepare-and-test
     name: Build and Push Docker Image
     runs-on: tgbotapp-runner
+    container:
+      image: ghcr.io/actions/actions-runner:latest
     steps:
       - name: Install dependencies
         uses: nick-invision/retry@v3
@@ -221,6 +225,8 @@ jobs:
     needs: [prepare-and-test, build-and-push]
     name: Release and Deploy
     runs-on: tgbotapp-runner
+    container:
+      image: ghcr.io/actions/actions-runner:latest
     steps:
       - name: Install dependencies
         uses: nick-invision/retry@v3
