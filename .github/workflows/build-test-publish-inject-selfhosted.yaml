@@ -136,14 +136,18 @@ jobs:
     name: Build and Push Docker Image
     runs-on: tgbotapp-runner
     container:
-      image: quay.io/buildah/stable:latest
+      image: ghcr.io/actions/actions-runner:latest
     steps:
       - name: Install dependencies
         uses: nick-invision/retry@v3
         with:
           timeout_minutes: 5
           max_attempts: 5
-          command: sudo dnf install -y git make qemu-user-static
+          command: |
+            sudo apt-get -y update && \
+            sudo apt-get install -qq -y git make qemu-user-static wget && \
+            wget -O buildah.deb http://ftp.uk.debian.org/debian/pool/main/g/golang-github-containers-buildah/buildah_1.37.1+ds1-2_arm64.deb && \
+            sudo dpkg -i buildah.deb
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -154,14 +158,6 @@ jobs:
           machine: github.com
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
-
-      # - name: Login to GHCR
-      #   if: github.event_name != 'pull_request'
-      #   uses: docker/login-action@v3
-      #   with:
-      #     registry: ghcr.io
-      #     username: ${{ github.ACTOR }}
-      #     password: ${{ secrets.ghcr-token }}
 
       - name: Install Go
         uses: actions/setup-go@v5
@@ -213,16 +209,6 @@ jobs:
           # build-args: |
           #   GITHUB_SHA=${{ github.sha }}
           #   GITHUB_COMMIT_NUMBER=${{ needs.prepare-and-test.outputs.GITHUB_COMMIT_NUMBER }}
-
-      # - name: Push To quay.io
-      #   id: push-to-quay
-      #   uses: redhat-actions/push-to-registry@v2
-      #   with:
-      #     image: ${{ steps.build-image.outputs.image }}
-      #     tags: ${{ steps.build-image.outputs.tags }}
-      #     registry: quay.io/quay-user
-      #     username: quay-user
-      #     password: ${{ secrets.REGISTRY_PASSWORD }}
 
       # - name: Build and push
       #   uses: docker/build-push-action@v6
