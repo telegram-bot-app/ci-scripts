@@ -213,7 +213,6 @@ jobs:
         with:
           name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
           body: ${{ github.event.head_commit.message }}
-          generate_release_notes: true
           token: ${{ secrets.ghcr-token }}
           tag_name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
           prerelease: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
