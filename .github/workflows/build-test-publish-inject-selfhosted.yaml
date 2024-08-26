@@ -223,8 +223,7 @@ jobs:
         env:
           DRONE_SERVER: ${{ secrets.drone-server }}
           DRONE_TOKEN: ${{ secrets.drone-token }}
-        shell: bash -l {0}
         run: |
-          woodpecker-cli setup --server ${{ secrets.drone-server }} --token ${{ secrets.drone-token }}
-          woodpecker-cli deploy ${{ github.repository }} \
+          /usr/bin/woodpecker-cli setup --server ${{ secrets.drone-server }} --token ${{ secrets.drone-token }}
+          /usr/bin/woodpecker-cli deploy ${{ github.repository }} \
             --param IMAGE_VERSION=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} --param IMAGE_DEPLOYMENT_NAME=${{ inputs.k8s-microservice-name }}
