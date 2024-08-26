@@ -93,13 +93,23 @@ jobs:
           github_username: ${{ github.ACTOR }}
           github_token: ${{ secrets.ghcr-token }}
 
-      - name: Install Go
-        uses: actions/setup-go@v5
-        id: cache
+      - name: Cache dependencies
+        uses: actions/cache@v4
         with:
-          check-latest: false
-          go-version: ${{env.GO_VERSION}}
-          cache-dependency-path: "**/*.sum"
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # - name: Install Go
+      #   uses: actions/setup-go@v5
+      #   id: cache
+      #   with:
+      #     check-latest: false
+      #     go-version: ${{env.GO_VERSION}}
+      #     cache-dependency-path: "**/*.sum"
 
       - name: Configure git for private modules
         uses: extractions/netrc@v2
@@ -142,13 +152,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
 
-      - name: Install Go
-        uses: actions/setup-go@v5
-        id: cache
+      # - name: Install Go
+      #   uses: actions/setup-go@v5
+      #   id: cache
+      #   with:
+      #     check-latest: false
+      #     go-version: ${{env.GO_VERSION}}
+      #     cache-dependency-path: "**/*.sum"
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
         with:
-          check-latest: false
-          go-version: ${{env.GO_VERSION}}
-          cache-dependency-path: "**/*.sum"
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Conditional dependencies
         run: |
