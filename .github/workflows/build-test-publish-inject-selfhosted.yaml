@@ -52,7 +52,7 @@ jobs:
     name: Prepare and Test
     runs-on: tgbotapp-runner
     container:
-      image: ubuntu:22.04
+      image: golang:1.22
     env:
       GOHOME: /home/runner/go
     services:
