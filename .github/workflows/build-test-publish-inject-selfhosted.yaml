@@ -53,14 +53,14 @@ jobs:
     runs-on: tgbotapp-runner
     env:
       GOHOME: /home/runner/go
-    services:
-      redis:
-        image: redis:7.4.0-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    # services:
+    #   redis:
+    #     image: redis:7.4.0-alpine
+    #     options: >-
+    #       --health-cmd "redis-cli ping"
+    #       --health-interval 10s
+    #       --health-timeout 5s
+    #       --health-retries 5
     outputs:
       SANITISED_REPOSITORY_NAME: ${{ steps.get_env.outputs.SANITISED_REPOSITORY_NAME }}
       DOCKER_IMAGE: ${{ steps.get_env.outputs.DOCKER_IMAGE }}
@@ -213,6 +213,7 @@ jobs:
         with:
           name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
           body: ${{ github.event.head_commit.message }}
+          generate_release_notes: true
           token: ${{ secrets.ghcr-token }}
           tag_name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
           prerelease: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
