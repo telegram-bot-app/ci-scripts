@@ -51,16 +51,18 @@ jobs:
   prepare-and-test:
     name: Prepare and Test
     runs-on: tgbotapp-runner
+    container:
+      image: ghcr.io/lukaszraczylo/gharc-runner:v0.0.9
     env:
       GOHOME: /home/runner/go
-    # services:
-    #   redis:
-    #     image: redis:7.4.0-alpine
-    #     options: >-
-    #       --health-cmd "redis-cli ping"
-    #       --health-interval 10s
-    #       --health-timeout 5s
-    #       --health-retries 5
+    services:
+      redis:
+        image: redis:7.4.0-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     outputs:
       SANITISED_REPOSITORY_NAME: ${{ steps.get_env.outputs.SANITISED_REPOSITORY_NAME }}
       DOCKER_IMAGE: ${{ steps.get_env.outputs.DOCKER_IMAGE }}
@@ -205,8 +207,6 @@ jobs:
     needs: [prepare-and-test, build-and-push]
     name: Release and Deploy
     runs-on: tgbotapp-runner
-    container:
-      image: ghcr.io/actions/actions-runner:latest
     steps:
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -224,6 +224,6 @@ jobs:
           DRONE_SERVER: ${{ secrets.drone-server }}
           DRONE_TOKEN: ${{ secrets.drone-token }}
         run: |
-          /usr/bin/woodpecker-cli setup --server ${{ secrets.drone-server }} --token ${{ secrets.drone-token }}
-          /usr/bin/woodpecker-cli deploy ${{ github.repository }} \
+          woodpecker-cli setup --server ${{ secrets.drone-server }} --token ${{ secrets.drone-token }}
+          woodpecker-cli deploy ${{ github.repository }} \
             --param IMAGE_VERSION=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} --param IMAGE_DEPLOYMENT_NAME=${{ inputs.k8s-microservice-name }}
