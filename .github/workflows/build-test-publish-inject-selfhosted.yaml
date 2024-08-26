@@ -52,7 +52,7 @@ jobs:
     name: Prepare and Test
     runs-on: tgbotapp-runner
     container:
-      image: ghcr.io/lukaszraczylo/gharc-runner:v0.0.9
+      image: ubuntu:22.04
     env:
       GOHOME: /home/runner/go
     services:
