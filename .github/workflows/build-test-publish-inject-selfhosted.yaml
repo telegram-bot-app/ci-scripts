@@ -193,6 +193,7 @@ jobs:
       - name: Push to ghcr
         id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
+        if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
         with:
           image: ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}
           tags: ${{ github.sha }} ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} latest
