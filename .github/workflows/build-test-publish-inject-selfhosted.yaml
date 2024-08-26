@@ -51,8 +51,6 @@ jobs:
   prepare-and-test:
     name: Prepare and Test
     runs-on: tgbotapp-runner
-    # container:
-    #   image: ghcr.io/actions/actions-runner:latest
     env:
       GOHOME: /home/runner/go
     # services:
@@ -139,8 +137,6 @@ jobs:
     needs: prepare-and-test
     name: Build and Push Docker Image
     runs-on: tgbotapp-runner
-    container:
-      image: ghcr.io/actions/actions-runner:latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
