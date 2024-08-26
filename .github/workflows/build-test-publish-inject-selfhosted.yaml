@@ -53,14 +53,14 @@ jobs:
     runs-on: tgbotapp-runner
     env:
       GOHOME: /home/runner/go
-    # services:
-    #   redis:
-    #     image: redis:7.4.0-alpine
-    #     options: >-
-    #       --health-cmd "redis-cli ping"
-    #       --health-interval 10s
-    #       --health-timeout 5s
-    #       --health-retries 5
+    services:
+      redis:
+        image: redis:7.4.0-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     outputs:
       SANITISED_REPOSITORY_NAME: ${{ steps.get_env.outputs.SANITISED_REPOSITORY_NAME }}
       DOCKER_IMAGE: ${{ steps.get_env.outputs.DOCKER_IMAGE }}
@@ -99,15 +99,7 @@ jobs:
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-
-
-      # - name: Install Go
-      #   uses: actions/setup-go@v5
-      #   id: cache
-      #   with:
-      #     check-latest: false
-      #     go-version: ${{env.GO_VERSION}}
-      #     cache-dependency-path: "**/*.sum"
+            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
       - name: Configure git for private modules
         uses: extractions/netrc@v2
@@ -148,14 +140,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
 
-      # - name: Install Go
-      #   uses: actions/setup-go@v5
-      #   id: cache
-      #   with:
-      #     check-latest: false
-      #     go-version: ${{env.GO_VERSION}}
-      #     cache-dependency-path: "**/*.sum"
-
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
@@ -164,7 +148,7 @@ jobs:
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-
+            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
       - name: Conditional dependencies
         run: |
@@ -205,49 +189,40 @@ jobs:
             com.github.repo.branch=${{ github.ref_name }}
           context: .
           containerfiles: Dockerfile
-          # build-args: |
-          #   GITHUB_SHA=${{ github.sha }}
-          #   GITHUB_COMMIT_NUMBER=${{ needs.prepare-and-test.outputs.GITHUB_COMMIT_NUMBER }}
 
-  # release-and-deploy:
-  #   needs: [prepare-and-test, build-and-push]
-  #   name: Release and Deploy
-  #   runs-on: tgbotapp-runner
-  #   container:
-  #     image: ghcr.io/actions/actions-runner:latest
-  #   steps:
-  #     - name: Install dependencies
-  #       uses: nick-invision/retry@v3
-  #       with:
-  #         timeout_minutes: 5
-  #         max_attempts: 5
-  #         command: |
-  #           woodpecker_cached_client=/home/runner/.cache/woodpecker.tar.gz
-  #           sudo apt-get install git -y
-  #           # if the woodpecker-cli is not cached, download it
-  #           if [ ! -f $woodpecker_cached_client ]; then
-  #             sudo apt-get install curl -y
-  #             curl -sL https://github.com/woodpecker-ci/woodpecker/releases/download/v2.7.0/woodpecker-cli_linux_arm64.tar.gz -o $woodpecker_cached_client
-  #             tar -xvf $woodpecker_cached_client -C /home/runner/.cache/
-  #           fi
-  #           sudo cp /home/runner/.cache/woodpecker-cli /usr/local/bin/woodpecker-cli
+      - name: Push to ghcr
+        id: push-to-ghcr
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}
+          tags: ${{ github.sha }} ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} latest
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.ghcr-token }}
 
-  #     - name: Create Release
-  #       uses: softprops/action-gh-release@v2
-  #       with:
-  #         name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
-  #         body: ${{ github.event.head_commit.message }}
-  #         token: ${{ secrets.ghcr-token }}
-  #         tag_name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
-  #         prerelease: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
+  release-and-deploy:
+    needs: [prepare-and-test, build-and-push]
+    name: Release and Deploy
+    runs-on: tgbotapp-runner
+    container:
+      image: ghcr.io/actions/actions-runner:latest
+    steps:
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
+          body: ${{ github.event.head_commit.message }}
+          token: ${{ secrets.ghcr-token }}
+          tag_name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
+          prerelease: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
 
-  #     - name: Deploy to dev cluster
-  #       if: inputs.should-deploy == true
-  #       env:
-  #         DRONE_SERVER: ${{ secrets.drone-server }}
-  #         DRONE_TOKEN: ${{ secrets.drone-token }}
-  #       shell: bash -l {0}
-  #       run: |
-  #         woodpecker-cli setup --server ${{ secrets.drone-server }} --token ${{ secrets.drone-token }}
-  #         woodpecker-cli deploy ${{ github.repository }} \
-  #           --param IMAGE_VERSION=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} --param IMAGE_DEPLOYMENT_NAME=${{ inputs.k8s-microservice-name }}
+      - name: Deploy to dev cluster
+        if: inputs.should-deploy == true
+        env:
+          DRONE_SERVER: ${{ secrets.drone-server }}
+          DRONE_TOKEN: ${{ secrets.drone-token }}
+        shell: bash -l {0}
+        run: |
+          woodpecker-cli setup --server ${{ secrets.drone-server }} --token ${{ secrets.drone-token }}
+          woodpecker-cli deploy ${{ github.repository }} \
+            --param IMAGE_VERSION=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} --param IMAGE_DEPLOYMENT_NAME=${{ inputs.k8s-microservice-name }}
