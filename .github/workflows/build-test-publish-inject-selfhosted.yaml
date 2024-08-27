@@ -223,6 +223,8 @@ jobs:
           DRONE_SERVER: ${{ secrets.drone-server }}
           DRONE_TOKEN: ${{ secrets.drone-token }}
         run: |
-          woodpecker-cli setup --server ${{ secrets.drone-server }} --token ${{ secrets.drone-token }}
-          woodpecker-cli deploy ${{ github.repository }} \
-            --param IMAGE_VERSION=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} --param IMAGE_DEPLOYMENT_NAME=${{ inputs.k8s-microservice-name }}
+          kubectl set image deployment/${{ inputs.k8s-microservice-name }} microservice=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} -n ${{ inputs.k8s-namespace }}
+
+          # woodpecker-cli setup --server ${{ secrets.drone-server }} --token ${{ secrets.drone-token }}
+          # woodpecker-cli deploy ${{ github.repository }} \
+          #   --param IMAGE_VERSION=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} --param IMAGE_NAMESPACE=${{ inputs.k8s-namespace }} --param IMAGE_DEPLOYMENT_NAME=${{ inputs.k8s-microservice-name }}
