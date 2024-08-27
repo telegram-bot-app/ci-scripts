@@ -208,14 +208,14 @@ jobs:
     name: Release and Deploy
     runs-on: tgbotapp-runner
     steps:
-      # - name: Create Release
-      #   uses: softprops/action-gh-release@v2
-      #   with:
-      #     name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
-      #     body: ${{ github.event.head_commit.message }}
-      #     token: ${{ secrets.ghcr-token }}
-      #     tag_name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
-      #     prerelease: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
+          body: ${{ github.event.head_commit.message }}
+          token: ${{ secrets.ghcr-token }}
+          tag_name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
+          prerelease: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
 
       - name: Deploy to dev cluster
         if: inputs.should-deploy == true
