@@ -45,14 +45,14 @@ env:
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
   ENABLE_IMAGE_SIGNING: ${{ inputs.enable-image-signing }}
   SHOULD_DEPLOY: "${{ inputs.should-deploy }}"
-  GO_VERSION: "1.22"
+  GO_VERSION: "1.23"
 
 jobs:
   prepare-and-test:
     name: Prepare and Test
     runs-on: tgbotapp-runner
     container:
-      image: golang:1.22
+      image: golang:1.23
     env:
       GOHOME: /home/runner/go
     services:
