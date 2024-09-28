@@ -86,7 +86,8 @@ jobs:
           TMP_SANITISED_REPOSITORY_NAME=$(echo ${{ github.event.repository.name }} | sed -e 's|\.|-|g')
           echo "SANITISED_REPOSITORY_NAME=$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
           echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
-          TMP_DEPLOYMENT_REPO_DIR=$(echo ${{ inputs.deployment-repo }} | awk -F'/' '{print $NF}') >> $GITHUB_OUTPUT
+          DEPLOYMENT_REPO="${{ inputs.deployment-repo }}"
+          echo "TMP_DEPLOYMENT_REPO_DIR=${DEPLOYMENT_REPO##*/}" >> $GITHUB_OUTPUT
           if [ -z "$TMP_DEPLOYMENT_REPO_DIR" ]; then
             echo "Error: Deployment repo directory not found."
             exit 1
