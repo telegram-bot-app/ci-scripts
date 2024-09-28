@@ -88,10 +88,6 @@ jobs:
           echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
           DEPLOYMENT_REPO="${{ inputs.deployment-repo }}"
           echo "TMP_DEPLOYMENT_REPO_DIR=${DEPLOYMENT_REPO##*/}" >> $GITHUB_OUTPUT
-          if [ -z "$TMP_DEPLOYMENT_REPO_DIR" ]; then
-            echo "Error: Deployment repo directory not found."
-            exit 1
-          fi
 
       - name: Establish semver
         id: semver
