@@ -238,6 +238,7 @@ jobs:
           token: ${{ secrets.ghcr-token }}
 
       - name: Deploy microservice version
+        if: inputs.should-deploy == true
         shell: bash
         run: |
           cd ${{ needs.prepare-and-test.outputs.DEPLOYMENT_REPO_DIRECTORY }}
@@ -262,6 +263,7 @@ jobs:
           fi
 
       - uses: peter-evans/create-pull-request@v6
+        if: inputs.should-deploy == true
         name: Create pull request
         with:
           token: ${{ secrets.ghcr-token }}
@@ -275,6 +277,7 @@ jobs:
 
         # Merge the pull request
       - name: Merge the newly open pull request
+        if: inputs.should-deploy == true
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.ghcr-token }}
