@@ -23,6 +23,10 @@ on:
         required: false
         type: boolean
         default: true
+      deployment-repo:
+        required: false
+        type: string
+        default: "telegram-bot-app/discuse-kustomize"
     secrets:
       ghcr-token:
         required: true
@@ -69,6 +73,7 @@ jobs:
       GITHUB_COMMIT_NUMBER: ${{ steps.get_env.outputs.GITHUB_COMMIT_NUMBER }}
       GITHUB_SHA: ${{ steps.get_env.outputs.GITHUB_SHA }}
       DOCKER_IMAGE_SEMVER: ${{ steps.semver.outputs.semantic_version }}
+      DEPLOYMENT_REPO_DIRECTORY: ${{ steps.get_env.outputs.TMP_DEPLOYMENT_REPO }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -81,6 +86,7 @@ jobs:
           TMP_SANITISED_REPOSITORY_NAME=$(echo ${{ github.event.repository.name }} | sed -e 's|\.|-|g')
           echo "SANITISED_REPOSITORY_NAME=$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
           echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          TMP_DEPLOYMENT_REPO=$(echo ${{ inputs.deployment-repo }} | awk -F'/' '{print $NF}') >> $GITHUB_OUTPUT
 
       - name: Establish semver
         id: semver
@@ -217,10 +223,65 @@ jobs:
           tag_name: v${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}
           prerelease: ${{ github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
 
-      - name: Deploy to dev cluster
+      - name: Clone kustomization repo
+        uses: actions/checkout@v4
         if: inputs.should-deploy == true
-        env:
-          DRONE_SERVER: ${{ secrets.drone-server }}
-          DRONE_TOKEN: ${{ secrets.drone-token }}
+        with:
+          ref: main
+          fetch-depth: 0
+          repository: ${{ inputs.deployment-repo }}
+          path: ${{ needs.prepare-and-test.outputs.DEPLOYMENT_REPO_DIRECTORY }}
+          token: ${{ secrets.ghcr-token }}
+
+      - name: Deploy microservice version
+        shell: bash
         run: |
-          kubectl set image deployment/${{ inputs.k8s-microservice-name }} microservice=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} -n ${{ inputs.k8s-namespace }}
+          cd ${{ needs.prepare-and-test.outputs.DEPLOYMENT_REPO_DIRECTORY }}
+          echo "Deploying microservice ${{ inputs.k8s-microservice-name }} version: ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}"
+          env_file="./releases/prod.env"
+
+          # Check if the environment file exists
+          if [ ! -f "$env_file" ]; then
+              echo "Error: Environment file $env_file does not exist."
+              exit 1
+          fi
+
+          # Use sed to update the version for the specified microservice
+          sed -i "s/^${{ inputs.k8s-microservice-name }}=.*/${{ inputs.k8s-microservice-name }}=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}/" "$env_file"
+
+          # Check if the microservice was found and updated
+          if grep -q "^${{ inputs.k8s-microservice-name }}=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}$" "$env_file"; then
+              echo "Successfully updated ${{ inputs.k8s-microservice-name }} to version ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} in ${env_file}"
+          else
+              echo "Error: Failed to update ${{ inputs.k8s-microservice-name }} in ${env_file}. Make sure the microservice name is correct."
+              exit 1
+          fi
+
+      - uses: peter-evans/create-pull-request@v6
+        name: Create pull request
+        with:
+          token: ${{ secrets.ghcr-token }}
+          commit-message: "Update ${{ inputs.k8s-microservice-name }} to version ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}"
+          title: "Update ${{ inputs.k8s-microservice-name }} to ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}"
+          body: "This PR updates ${{ inputs.k8s-microservice-name }} to version ${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}"
+          branch: "update-${{ inputs.k8s-microservice-name }}-to-${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}"
+          base: "main"
+          labels: "auto-update,gha-deploy-microservice"
+          path: ${{ needs.prepare-and-test.outputs.DEPLOYMENT_REPO_DIRECTORY }}
+
+        # Merge the pull request
+      - name: Merge the newly open pull request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.ghcr-token }}
+        run: |
+          cd ${{ needs.prepare-and-test.outputs.DEPLOYMENT_REPO_DIRECTORY }}
+          gh pr merge --admin --squash --delete-branch "update-${{ inputs.k8s-microservice-name }}-to-${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }}"
+
+      # - name: Deploy to dev cluster
+      #   if: inputs.should-deploy == true
+      #   env:
+      #     DRONE_SERVER: ${{ secrets.drone-server }}
+      #     DRONE_TOKEN: ${{ secrets.drone-token }}
+      #   run: |
+      #     kubectl set image deployment/${{ inputs.k8s-microservice-name }} microservice=${{ needs.prepare-and-test.outputs.DOCKER_IMAGE }}:${{ needs.prepare-and-test.outputs.DOCKER_IMAGE_SEMVER }} -n ${{ inputs.k8s-namespace }}
