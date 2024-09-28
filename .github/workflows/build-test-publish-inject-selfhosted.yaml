@@ -24,7 +24,7 @@ on:
         type: boolean
         default: true
       deployment-repo:
-        required: false
+        required: true
         type: string
         default: "telegram-bot-app/discuse-kustomize"
     secrets:
