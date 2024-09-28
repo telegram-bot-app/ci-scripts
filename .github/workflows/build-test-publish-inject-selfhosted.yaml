@@ -24,7 +24,7 @@ on:
         type: boolean
         default: true
       deployment-repo:
-        required: true
+        required: false
         type: string
         default: "telegram-bot-app/discuse-kustomize"
     secrets:
@@ -73,7 +73,7 @@ jobs:
       GITHUB_COMMIT_NUMBER: ${{ steps.get_env.outputs.GITHUB_COMMIT_NUMBER }}
       GITHUB_SHA: ${{ steps.get_env.outputs.GITHUB_SHA }}
       DOCKER_IMAGE_SEMVER: ${{ steps.semver.outputs.semantic_version }}
-      DEPLOYMENT_REPO_DIRECTORY: ${{ steps.get_env.outputs.TMP_DEPLOYMENT_REPO }}
+      DEPLOYMENT_REPO_DIRECTORY: ${{ steps.get_env.outputs.TMP_DEPLOYMENT_REPO_DIR }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -86,7 +86,11 @@ jobs:
           TMP_SANITISED_REPOSITORY_NAME=$(echo ${{ github.event.repository.name }} | sed -e 's|\.|-|g')
           echo "SANITISED_REPOSITORY_NAME=$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
           echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
-          TMP_DEPLOYMENT_REPO=$(echo ${{ inputs.deployment-repo }} | awk -F'/' '{print $NF}') >> $GITHUB_OUTPUT
+          TMP_DEPLOYMENT_REPO_DIR=$(echo ${{ inputs.deployment-repo }} | awk -F'/' '{print $NF}') >> $GITHUB_OUTPUT
+          if [ -z "$TMP_DEPLOYMENT_REPO_DIR" ]; then
+            echo "Error: Deployment repo directory not found."
+            exit 1
+          fi
 
       - name: Establish semver
         id: semver
