@@ -49,14 +49,14 @@ env:
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
   ENABLE_IMAGE_SIGNING: ${{ inputs.enable-image-signing }}
   SHOULD_DEPLOY: "${{ inputs.should-deploy }}"
-  GO_VERSION: "1.23"
+  GO_VERSION: ">=1.22"
 
 jobs:
   prepare-and-test:
     name: Prepare and Test
     runs-on: tgbotapp-runner
     container:
-      image: golang:1.23
+      image: golang:1
     env:
       GOHOME: /home/runner/go
     services:
@@ -86,6 +86,8 @@ jobs:
           TMP_SANITISED_REPOSITORY_NAME=$(echo ${{ github.event.repository.name }} | sed -e 's|\.|-|g')
           echo "SANITISED_REPOSITORY_NAME=$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
           echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          echo "GITHUB_COMMIT_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_OUTPUT
+          echo "GITHUB_SHA=$(echo ${GITHUB_SHA::8})" >> $GITHUB_OUTPUT
           DEPLOYMENT_REPO="${{ inputs.deployment-repo }}"
           echo "TMP_DEPLOYMENT_REPO_DIR=${DEPLOYMENT_REPO##*/}" >> $GITHUB_OUTPUT
 

@@ -40,14 +40,14 @@ env:
   GOPRIVATE: "github.com/telegram-bot-app/*"
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
   ENABLE_IMAGE_SIGNING: ${{ inputs.enable-image-signing }}
-  GO_VERSION: ">=1.21"
+  GO_VERSION: ">=1.22"
 
 jobs:
   # This job is responsible for preparation of the build
   # environment variables.
   prepare:
     name: Preparing build context
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     outputs:
       SANITISED_REPOSITORY_NAME: ${{ steps.get_env.outputs.SANITISED_REPOSITORY_NAME }}
       DOCKER_IMAGE: ${{ steps.get_env.outputs.DOCKER_IMAGE }}
@@ -63,10 +63,10 @@ jobs:
         id: get_env
         run: |
           TMP_SANITISED_REPOSITORY_NAME=$(echo ${{ github.event.repository.name }} | sed -e 's|\.|-|g')
-          echo "::set-output name=SANITISED_REPOSITORY_NAME::$TMP_SANITISED_REPOSITORY_NAME"
-          echo "::set-output name=DOCKER_IMAGE::ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME"
-          echo "::set-output name=GITHUB_COMMIT_NUMBER::$(git rev-list --count HEAD)"
-          echo "::set-output name=GITHUB_SHA::$(echo ${GITHUB_SHA::8})"
+          echo "SANITISED_REPOSITORY_NAME=$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          echo "GITHUB_COMMIT_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_OUTPUT
+          echo "GITHUB_SHA=$(echo ${GITHUB_SHA::8})" >> $GITHUB_OUTPUT
 
       - name: Establish semver
         id: semver
@@ -75,7 +75,7 @@ jobs:
           config_file: semver.yaml
           repository_local: true
           github_username: ${{ github.ACTOR }}
-          github_token: $GHCR_TOKEN
+          github_token: ${{ secrets.ghcr-token }}
 
       - name: Semver check
         run: |
@@ -84,30 +84,21 @@ jobs:
   # This job is responsible for running tests and linting the codebase
   test:
     name: "Unit testing"
-    # needs: [prepare]
-    runs-on: ubuntu-20.04
-    # container: github/super-linter:v4
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Install Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ env.GO_VERSION }}
       - name: Configure git for private modules
         uses: extractions/netrc@v1
         with:
           machine: github.com
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
-      - uses: actions/cache@v3
+      - name: Install Go
+        uses: actions/setup-go@v5
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/*.sum"
       - name: Run unit tests
         if: inputs.disable-unit-tests == false
         run: |
@@ -115,10 +106,9 @@ jobs:
 
   # This job is responsible for running additional scans on the codebase
   code_scans:
-    # needs: [ prepare ]
     name: Code scans
-    runs-on: ubuntu-20.04
-    container: golang:1-buster
+    runs-on: ubuntu-latest
+    container: golang:1-bookworm
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -128,19 +118,11 @@ jobs:
           machine: github.com
           username: ${{ github.actor }}
           password: ${{ secrets.ghcr-token }}
-      - uses: actions/cache@v3
-        id: cache
+      - name: Install Go
+        uses: actions/setup-go@v5
         with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-      - name: Prepare for code scans
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          go get ./...
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: "**/*.sum"
       - name: WriteGoList
         run: go list -json -m all > go.list
       - name: Running nancy
@@ -158,43 +140,34 @@ jobs:
   build-local:
     needs: [ prepare, test, code_scans ]
     name: Docker image build (multiarch)
-    runs-on: ubuntu-20.04
-#     runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        
+
       - uses: sigstore/cosign-installer@main
 
       - name: Write signing key to disk (only needed for `cosign sign --key`)
         if: env.ENABLE_IMAGE_SIGNING == true
         run: echo "${{ secrets.signing-key }}" > cosign.key
-        
+
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-#       - uses: actions/cache@v3
-#         id: cache
-#         with:
-#           path: |
-#             ~/.cache/go-build
-#             ~/go/pkg/mod
-#             /tmp/.buildx-cache
-#           key: ${{ runner.os }}-go-buildx-${{ hashFiles('**/go.sum') }}
-#           restore-keys: |
-#             ${{ runner.os }}-go-buildx-${{ hashFiles('**/go.sum') }}
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.ACTOR }}
           password: ${{ secrets.ghcr-token }}
-          
+
       - name: Build image
         id: docker_build
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v6
         with:
           builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/arm64,linux/amd64
@@ -208,16 +181,10 @@ jobs:
             GITHUB_SHA=${{ needs.prepare.outputs.GITHUB_SHA }}
           labels: "org.opencontainers.image.revision=${{ needs.prepare.outputs.GITHUB_SHA }},org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ'),org.opencontainers.image.version=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},com.github.repo.branch=$(echo ${GITHUB_REF##*/} | tr '[A-Z]' '[a-z]')"
           no-cache: false
-#           cache-from: type=gha
-#           cache-to: type=gha,mode=max
-#           cache-from: type=local,src=/tmp/.buildx-cache
-#           cache-to: type=local,dest=/tmp/.buildx-cache-new
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
-#       - name: Move cache
-#         run: |
-#           rm -rf /tmp/.buildx-cache
-#           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Sign container image
         if: env.ENABLE_IMAGE_SIGNING == true

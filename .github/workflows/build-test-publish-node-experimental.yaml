@@ -40,7 +40,7 @@ jobs:
   # environment variables.
   prepare:
     name: Preparing build context
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     outputs:
       SANITISED_REPOSITORY_NAME: ${{ steps.get_env.outputs.SANITISED_REPOSITORY_NAME }}
       DOCKER_IMAGE: ${{ steps.get_env.outputs.DOCKER_IMAGE }}
@@ -51,25 +51,25 @@ jobs:
       CHECK_IF_MASTER_BRANCH: ${{ steps.get_env.outputs.CHECK_IF_MASTER_BRANCH }}
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Set environment variables
         id: get_env
         run: |
           TMP_SANITISED_REPOSITORY_NAME=$(echo ${{ github.event.repository.name }} | sed -e 's|\.|-|g')
-          echo "::set-output name=SANITISED_REPOSITORY_NAME::$TMP_SANITISED_REPOSITORY_NAME"
-          echo "::set-output name=DOCKER_IMAGE::ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME"
-          echo "::set-output name=GITHUB_COMMIT_NUMBER::$(git rev-list --count HEAD)"
-          echo "::set-output name=GITHUB_SHA::$(echo ${GITHUB_SHA::8})"
+          echo "SANITISED_REPOSITORY_NAME=$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          echo "DOCKER_IMAGE=ghcr.io/${{ github.repository_owner }}/$TMP_SANITISED_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          echo "GITHUB_COMMIT_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_OUTPUT
+          echo "GITHUB_SHA=$(echo ${GITHUB_SHA::8})" >> $GITHUB_OUTPUT
           [ -d "website/" ] && cd website/ || cd ${{ inputs.node-app-path }}
-          echo "::set-output name=WORKING_DIRECTORY::$(pwd)"
+          echo "WORKING_DIRECTORY=$(pwd)" >> $GITHUB_OUTPUT
           # Check if it's master or main branch
           currentBranch=$(git rev-parse --abbrev-ref HEAD)
           if [ "$currentBranch" = "master" ] || [ "$currentBranch" = "main" ]; then
-            echo "::set-output name=CHECK_IF_MASTER_BRANCH::true"
+            echo "CHECK_IF_MASTER_BRANCH=true" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=CHECK_IF_MASTER_BRANCH::false"
+            echo "CHECK_IF_MASTER_BRANCH=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Establish semver
@@ -79,7 +79,7 @@ jobs:
           config_file: semver.yaml
           repository_local: true
           github_username: ${{ github.ACTOR }}
-          github_token: $GHCR_TOKEN
+          github_token: ${{ secrets.ghcr-token }}
 
       - name: Semver check
         run: |
@@ -88,14 +88,13 @@ jobs:
   build-local:
     needs: [prepare]
     name: Building node application locally
-#     runs-on: self-hosted
     defaults:
       run:
         working-directory: ${{ needs.prepare.outputs.WORKING_DIRECTORY }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Move package and yarn if necessary
         run: |
           if [[ "${{ needs.prepare.outputs.WORKING_DIRECTORY }}" =~ \/website$ ]]; then
@@ -103,22 +102,20 @@ jobs:
             cp yarn.lock ../ || true
           fi
       - name: Setup NodeJS
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '20'
           cache: 'yarn'
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
           path: |
             node_modules
-            disr/ssr/node_modules
-            /tmp/.buildx-cache
+            dist/ssr/node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
-          restore-keys:
+          restore-keys: |
             ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
       - name: Install dependencies
         run: |
-          # yarn install --network-timeout 1000000000 --ignore-optional --ignore-engines --link-duplicates --check-files
           yarn --prefer-offline --network-timeout 1000000000 --ignore-optional --ignore-engines --link-duplicates --check-files
           yarn global add @quasar/cli --network-timeout 1000000000
 
@@ -141,25 +138,25 @@ jobs:
           NODE_ENV=production yarn --prefer-offline --network-timeout 1000000000 --ignore-optional --ignore-engines --check-files
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.ACTOR }}
           password: ${{ secrets.ghcr-token }}
       - name: 'Authenticate to Google Cloud'
         id: 'gcloudauth'
-        uses: 'google-github-actions/auth@v0'
+        uses: 'google-github-actions/auth@v2'
         with:
           token_format: 'access_token'
           credentials_json: '${{ secrets.gcloud-token }}'
-      - name: Login to GHCR
+      - name: Login to GCR
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: eu.gcr.io
           username: 'oauth2accesstoken'
@@ -167,7 +164,7 @@ jobs:
           logout: false
       - name: Build image
         id: docker_build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         with:
           builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/arm64,linux/amd64
@@ -184,131 +181,12 @@ jobs:
           context: ${{ needs.prepare.outputs.WORKING_DIRECTORY }}
           labels: "org.opencontainers.image.revision=${{ needs.prepare.outputs.GITHUB_SHA }},org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ'),org.opencontainers.image.version=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},com.github.repo.branch=$(echo ${GITHUB_REF##*/} | tr '[A-Z]' '[a-z]')"
           no-cache: false
-#           cache-from: type=gha
-#           cache-to: type=gha,mode=max
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-
-  # # This job is responsible for running tests and linting the codebase
-  # test:
-  #   name: "Unit testing"
-  #   # needs: [prepare]
-  #   runs-on: ubuntu-20.04
-  #   # container: github/super-linter:v4
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v2
-  #     - name: Install Go
-  #       uses: actions/setup-go@v2
-  #       with:
-  #         go-version: 1.17.3
-  #     - name: Configure git for private modules
-  #       uses: extractions/netrc@v1
-  #       with:
-  #         machine: github.com
-  #         username: ${{ github.actor }}
-  #         password: ${{ secrets.ghcr-token }}
-  #     - uses: actions/cache@v2
-  #       with:
-  #         path: |
-  #           ~/.cache/go-build
-  #           ~/go/pkg/mod
-  #         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-go-
-  #     - name: Run unit tests
-  #       run: |
-  #         CI_RUN=${CI} make test
-
-  # This job is responsible for running additional scans on the codebase
-  # code_scans:
-  #   # needs: [ prepare ]
-  #   name: Code scans
-  #   runs-on: ubuntu-20.04
-  #   container: golang:1-buster
-  #   steps:
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v2
-  #     - name: Configure git for private modules
-  #       uses: extractions/netrc@v1
-  #       with:
-  #         machine: github.com
-  #         username: ${{ github.actor }}
-  #         password: ${{ secrets.ghcr-token }}
-  #     - uses: actions/cache@v2
-  #       id: cache
-  #       with:
-  #         path: |
-  #           ~/.cache/go-build
-  #           ~/go/pkg/mod
-  #         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-go-
-  #     - name: Prepare for code scans
-  #       if: steps.cache.outputs.cache-hit != 'true'
-  #       run: |
-  #         go get ./...
-  #     - name: WriteGoList
-  #       run: go list -json -m all > go.list
-  #     - name: Running nancy
-  #       if: env.ENABLE_CODE_SCANS == true
-  #       continue-on-error: true
-  #       uses: sonatype-nexus-community/nancy-github-action@main
-  #     - name: Running gosec
-  #       if: env.ENABLE_CODE_SCANS == true
-  #       continue-on-error: true
-  #       uses: securego/gosec@master
-  #       with:
-  #         args: ./...
-
-  # This job is responsible for building docker image
-  # build:
-  #   needs: [ prepare ]
-  #   name: Docker image build (multiarch)
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v2
-  #     - name: Set up QEMU
-  #       uses: docker/setup-qemu-action@v1
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v1
-  #     - name: Login to GHCR
-  #       if: github.event_name != 'pull_request'
-  #       uses: docker/login-action@v1
-  #       with:
-  #         registry: ghcr.io
-  #         username: ${{ github.ACTOR }}
-  #         password: ${{ secrets.ghcr-token }}
-  #     - name: Build image
-  #       id: docker_build
-  #       uses: docker/build-push-action@v2
-  #       with:
-  #         builder: ${{ steps.buildx.outputs.name }}
-  #         platforms: linux/arm64,linux/amd64
-  #         push: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' }}
-  #         tags: "${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.GITHUB_SHA }},${{ needs.prepare.outputs.DOCKER_IMAGE  }}:${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},${{ needs.prepare.outputs.DOCKER_IMAGE  }}:latest"
-  #         build-args: |
-  #           ACCESS_TOKEN=${{ secrets.ghcr-token }}
-  #           ACCESS_USERNAME=${{ github.actor }}
-  #           MICROSERVICE_NAME=${{ github.event.repository.name }}
-  #           GITHUB_COMMIT_NUMBER=${{ needs.prepare.outputs.GITHUB_COMMIT_NUMBER }}
-  #           GITHUB_SHA=${{ needs.prepare.outputs.GITHUB_SHA }}
-  #         labels: "org.opencontainers.image.revision=${{ needs.prepare.outputs.GITHUB_SHA }},org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ'),org.opencontainers.image.version=${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }},com.github.repo.branch=$(echo ${GITHUB_REF##*/} | tr '[A-Z]' '[a-z]')"
-  #         no-cache: false
-  #         cache-from: type=gha
-  #         cache-to: type=gha,mode=max
-  #         secrets: |
-  #           GIT_AUTH_TOKEN=${{ secrets.ghcr-token }}
-
-  # # This job is responsible for creation of the release
+  # This job is responsible for creation of the release
   release:
     name: Create Release
     runs-on: ubuntu-latest
@@ -316,7 +194,7 @@ jobs:
     if: needs.prepare.outputs.CHECK_IF_MASTER_BRANCH == 'true'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Get list of the commits since last release
@@ -324,7 +202,7 @@ jobs:
           printf "$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"%h %s")" > .release_notes
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: v${{ needs.prepare.outputs.DOCKER_IMAGE_SEMVER }}
           body_path: .release_notes

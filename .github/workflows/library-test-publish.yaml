@@ -14,7 +14,7 @@ on:
 env:
   GOPRIVATE: "github.com/telegram-bot-app/*"
   ENABLE_CODE_SCANS: ${{ inputs.enable-code-scans }}
-  GO_VERSION: ">=1.21"
+  GO_VERSION: ">=1.22"
 
 jobs:
   # This job is responsible for preparation of the build
@@ -49,7 +49,7 @@ jobs:
           config_file: semver.yaml
           repository_local: true
           github_username: ${{ github.ACTOR }}
-          github_token: $GHCR_TOKEN
+          github_token: ${{ secrets.ghcr-token }}
 
       - name: Semver check
         run: |
@@ -104,10 +104,9 @@ jobs:
 
   # This job is responsible for running additional scans on the codebase
   code_scans:
-    # needs: [ prepare ]
     name: Code scans
     runs-on: ubuntu-latest
-    container: golang:1-buster
+    container: golang:1-bookworm
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -122,9 +121,6 @@ jobs:
         with:
           go-version: ${{env.GO_VERSION}}
           cache-dependency-path: "**/*.sum"
-      - name: Install dependencies
-        run: |
-          go get ./...
       - name: WriteGoList
         run: go list -json -m all > go.list
       - name: Running nancy
